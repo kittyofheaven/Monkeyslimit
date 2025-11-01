@@ -43,7 +43,7 @@ fun BottomBar(
     ) {
         Row(
             modifier = Modifier
-                .background(NavigationBarDefaults.containerColor)
+                .background(NavigationBarDefaults.containerColor) // NavBar BG Color
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -58,7 +58,7 @@ fun BottomBar(
                             .clip(RoundedCornerShape(10.dp))
                             .background(
                                 if (selected)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) // NavItem Selected BG Color
                                 else
                                     Color.Transparent
                             )
@@ -74,9 +74,9 @@ fun BottomBar(
                             painter = painterResource(item.iconId),
                             contentDescription = item.title,
                             tint = if (selected)
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.primary // NavItem Selected Icon Color
                             else
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSurfaceVariant // NavItem Icon Color
                         )
                     }
                 } else {
