@@ -3,6 +3,8 @@ package com.menac1ngmonkeys.monkeyslimit.ui.theme
 import androidx.compose.ui.graphics.Color
 
 //Light mode
+val LightWhite = Color(0xFFFFFFFF)
+val LightGrey = Color(0xFFF0F0F0)
 val LightBlack= Color(0xFF052224)
 val LightGreen400 = Color(0xFF2B5D54)
 val LightGreen300 = Color(0xFF447069)
