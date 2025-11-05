@@ -6,23 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Member
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Members
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface MemberDao {
+interface MembersDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(member: Member)
+    suspend fun insert(members: Members): Long
 
     @Query("SELECT * FROM members")
-    fun getAllMembers(): Flow<List<Member>>
+    fun getAllMembers(): Flow<List<Members>>
 
     @Query("SELECT * FROM members WHERE id = :id")
-    fun getMemberById(id: Int): Flow<Member>
+    fun getMemberById(id: Int): Flow<Members>
 
     @Update
-    suspend fun update(member: Member)
+    suspend fun update(members: Members)
 
     @Delete
-    suspend fun delete(member: Member)
+    suspend fun delete(members: Members)
 }

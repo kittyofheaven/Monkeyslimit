@@ -3,13 +3,12 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 import androidx.room.TypeConverters
-import androidx.room.Index
 import com.menac1ngmonkeys.monkeyslimit.utils.DateConverters
 import java.util.Date
 
-@Entity(tableName = "budget")
+@Entity(tableName = "budgets")
 @TypeConverters(DateConverters::class)
-data class Budget(
+data class Budgets(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "amount") val amount: Double,

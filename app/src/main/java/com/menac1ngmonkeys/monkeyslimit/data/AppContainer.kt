@@ -5,14 +5,14 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
 import com.menac1ngmonkeys.monkeyslimit.data.repository.*
 
 interface AppContainer {
-    val budgetRepository: BudgetRepository
-    val categoryRepository: CategoryRepository
-    val itemRepository: ItemRepository
-    val memberRepository: MemberRepository
+    val budgetsRepository: BudgetsRepository
+    val categoriesRepository: CategoriesRepository
+    val itemsRepository: ItemsRepository
+    val membersRepository: MembersRepository
     val memberItemsRepository: MemberItemsRepository
-    val notificationRepository: NotificationRepository
-    val smartSplitRepository: SmartSplitRepository
-    val transactionRepository: TransactionRepository
+    val notificationsRepository: NotificationsRepository
+    val smartSplitsRepository: SmartSplitsRepository
+    val transactionsRepository: TransactionsRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -21,35 +21,35 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         AppDatabase.getDatabase(context)
     }
 
-    override val budgetRepository: BudgetRepository by lazy {
-        BudgetRepository(database.budgetDao())
+    override val budgetsRepository: BudgetsRepository by lazy {
+        BudgetsRepository(database.budgetsDao())
     }
 
-    override val categoryRepository: CategoryRepository by lazy {
-        CategoryRepository(database.categoryDao())
+    override val categoriesRepository: CategoriesRepository by lazy {
+        CategoriesRepository(database.categoriesDao())
     }
 
-    override val itemRepository: ItemRepository by lazy {
-        ItemRepository(database.itemDao())
+    override val itemsRepository: ItemsRepository by lazy {
+        ItemsRepository(database.itemsDao())
     }
 
-    override val memberRepository: MemberRepository by lazy {
-        MemberRepository(database.memberDao())
+    override val membersRepository: MembersRepository by lazy {
+        MembersRepository(database.membersDao())
     }
 
     override val memberItemsRepository: MemberItemsRepository by lazy {
         MemberItemsRepository(database.memberItemsDao())
     }
 
-    override val notificationRepository: NotificationRepository by lazy {
-        NotificationRepository(database.notificationDao())
+    override val notificationsRepository: NotificationsRepository by lazy {
+        NotificationsRepository(database.notificationsDao())
     }
 
-    override val smartSplitRepository: SmartSplitRepository by lazy {
-        SmartSplitRepository(database.smartSplitDao())
+    override val smartSplitsRepository: SmartSplitsRepository by lazy {
+        SmartSplitsRepository(database.smartSplitsDao())
     }
 
-    override val transactionRepository: TransactionRepository by lazy {
-        TransactionRepository(database.transactionDao())
+    override val transactionsRepository: TransactionsRepository by lazy {
+        TransactionsRepository(database.transactionsDao())
     }
 }

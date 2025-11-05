@@ -6,23 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Notification
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Notifications
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface NotificationDao {
+interface NotificationsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(notification: Notification)
+    suspend fun insert(notifications: Notifications): Long
 
     @Query("SELECT * FROM notifications")
-    fun getAllNotifications(): Flow<List<Notification>>
+    fun getAllNotifications(): Flow<List<Notifications>>
 
     @Query("SELECT * FROM notifications WHERE id = :id")
-    fun getNotificationById(id: Int): Flow<Notification>
+    fun getNotificationById(id: Int): Flow<Notifications>
 
     @Update
-    suspend fun update(notification: Notification)
+    suspend fun update(notifications: Notifications)
 
     @Delete
-    suspend fun delete(notification: Notification)
+    suspend fun delete(notifications: Notifications)
 }

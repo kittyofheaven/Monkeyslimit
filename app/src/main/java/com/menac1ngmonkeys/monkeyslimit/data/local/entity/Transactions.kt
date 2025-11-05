@@ -1,21 +1,26 @@
 package com.menac1ngmonkeys.monkeyslimit.data.local.entity
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 import com.menac1ngmonkeys.monkeyslimit.utils.DateTimeConverters
 import java.util.Date
 
 @Entity(
-    tableName = "transaction",
+    tableName = "transactions",
     foreignKeys = [
         ForeignKey(
-            entity = Budget::class,
+            entity = Budgets::class,
             parentColumns = ["id"],
             childColumns = ["budgetId"],
             onUpdate = ForeignKey.CASCADE,
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = Category::class,
+            entity = Categories::class,
             parentColumns = ["id"],
             childColumns = ["categoryId"],
             onUpdate = ForeignKey.CASCADE,
@@ -25,7 +30,7 @@ import java.util.Date
     indices = [Index("budgetId"), Index("categoryId")]
 )
 @TypeConverters(DateTimeConverters::class)
-data class Transaction(
+data class Transactions(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "date") val date: Date,
     @ColumnInfo(name = "totalAmount") val totalAmount: Double,

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MemberItemsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(memberItems: MemberItems)
+    suspend fun insert(memberItems: MemberItems): Long
 
     @Query("SELECT * FROM memberitems")
     fun getAllMemberItems(): Flow<List<MemberItems>>

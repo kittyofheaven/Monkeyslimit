@@ -10,8 +10,8 @@ class MemberItemsRepository(private val memberItemsDao: MemberItemsDao) {
 
     fun getMemberItemsByMemberId(memberId: Int): Flow<List<MemberItems>> = memberItemsDao.getMemberItemsByMemberId(memberId)
 
-    suspend fun insert(memberItems: MemberItems) {
-        memberItemsDao.insert(memberItems)
+    suspend fun insert(memberItems: MemberItems): Long {
+        return memberItemsDao.insert(memberItems)
     }
 
     suspend fun delete(memberItems: MemberItems) {

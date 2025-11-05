@@ -6,7 +6,7 @@ import java.util.Date
 
 @Entity(tableName = "notifications")
 @TypeConverters(DateTimeConverters::class)
-data class Notification(
+data class Notifications(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "title") val title: String,
     @ColumnInfo(name = "description") val description: String?,

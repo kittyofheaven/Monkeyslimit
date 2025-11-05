@@ -1,12 +1,16 @@
 package com.menac1ngmonkeys.monkeyslimit.data.local.entity
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "item",
+    tableName = "members",
     foreignKeys = [
         ForeignKey(
-            entity = SmartSplit::class,
+            entity = SmartSplits::class,
             parentColumns = ["id"],
             childColumns = ["smartSplitId"],
             onUpdate = ForeignKey.CASCADE,
@@ -15,10 +19,10 @@ import androidx.room.*
     ],
     indices = [Index("smartSplitId")]
 )
-data class Item(
+data class Members(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "smartSplitId") val smartSplitId: Int,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "quantity") val quantity: Int,
-    @ColumnInfo(name = "totalPrice") val totalPrice: Double
+    @ColumnInfo(name = "contact") val contact: String?,
+    @ColumnInfo(name = "note") val note: String?
 )

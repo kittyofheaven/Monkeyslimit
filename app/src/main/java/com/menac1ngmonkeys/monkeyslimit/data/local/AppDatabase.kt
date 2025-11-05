@@ -9,28 +9,28 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.*
 
 @Database(
     entities = [
-        Budget::class, 
-        Category::class, 
-        Item::class, 
-        Member::class, 
-        MemberItems::class, 
-        Notification::class, 
-        SmartSplit::class, 
-        Transaction::class
+        Budgets::class,
+        Categories::class,
+        Items::class,
+        Members::class,
+        MemberItems::class,
+        Notifications::class,
+        SmartSplits::class,
+        Transactions::class
     ],
     version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun budgetDao(): BudgetDao
-    abstract fun categoryDao(): CategoryDao
-    abstract fun itemDao(): ItemDao
-    abstract fun memberDao(): MemberDao
+    abstract fun budgetsDao(): BudgetsDao
+    abstract fun categoriesDao(): CategoriesDao
+    abstract fun itemsDao(): ItemsDao
+    abstract fun membersDao(): MembersDao
     abstract fun memberItemsDao(): MemberItemsDao
-    abstract fun notificationDao(): NotificationDao
-    abstract fun smartSplitDao(): SmartSplitDao
-    abstract fun transactionDao(): TransactionDao
+    abstract fun notificationsDao(): NotificationsDao
+    abstract fun smartSplitsDao(): SmartSplitsDao
+    abstract fun transactionsDao(): TransactionsDao
 
     companion object {
         @Volatile
@@ -42,7 +42,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "monkeyslimit_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration(true)
+                .build()
                 INSTANCE = instance
                 instance
             }

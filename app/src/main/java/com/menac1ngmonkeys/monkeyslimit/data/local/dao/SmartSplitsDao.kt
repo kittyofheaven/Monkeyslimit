@@ -6,23 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.menac1ngmonkeys.monkeyslimit.data.local.entity.SmartSplit
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.SmartSplits
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface SmartSplitDao {
+interface SmartSplitsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(smartSplit: SmartSplit)
+    suspend fun insert(smartSplits: SmartSplits): Long
 
     @Query("SELECT * FROM smartsplits")
-    fun getAllSmartSplits(): Flow<List<SmartSplit>>
+    fun getAllSmartSplits(): Flow<List<SmartSplits>>
 
     @Query("SELECT * FROM smartsplits WHERE id = :id")
-    fun getSmartSplitById(id: Int): Flow<SmartSplit>
+    fun getSmartSplitById(id: Int): Flow<SmartSplits>
 
     @Update
-    suspend fun update(smartSplit: SmartSplit)
+    suspend fun update(smartSplits: SmartSplits)
 
     @Delete
-    suspend fun delete(smartSplit: SmartSplit)
+    suspend fun delete(smartSplits: SmartSplits)
 }

@@ -6,23 +6,23 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budget
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface BudgetDao {
+interface BudgetsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(budget: Budget)
+    suspend fun insert(budgets: Budgets): Long
 
     @Query("SELECT * FROM budgets")
-    fun getAllBudgets(): Flow<List<Budget>>
+    fun getAllBudgets(): Flow<List<Budgets>>
 
     @Query("SELECT * FROM budgets WHERE id = :id")
-    fun getBudgetById(id: Int): Flow<Budget>
+    fun getBudgetById(id: Int): Flow<Budgets>
 
     @Update
-    suspend fun update(budget: Budget)
+    suspend fun update(budgets: Budgets)
 
     @Delete
-    suspend fun delete(budget: Budget)
+    suspend fun delete(budgets: Budgets)
 }

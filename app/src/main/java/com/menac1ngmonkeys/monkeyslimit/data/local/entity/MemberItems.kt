@@ -1,19 +1,23 @@
 package com.menac1ngmonkeys.monkeyslimit.data.local.entity
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "memberitems",
     foreignKeys = [
         ForeignKey(
-            entity = Member::class,
+            entity = Members::class,
             parentColumns = ["id"],
             childColumns = ["memberId"],
             onUpdate = ForeignKey.CASCADE,
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = Item::class,
+            entity = Items::class,
             parentColumns = ["id"],
             childColumns = ["itemId"],
             onUpdate = ForeignKey.CASCADE,

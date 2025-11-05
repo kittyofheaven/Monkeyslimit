@@ -4,9 +4,9 @@ import androidx.room.*
 import com.menac1ngmonkeys.monkeyslimit.utils.DateTimeConverters
 import  java.util.Date
 
-@Entity(tableName = "smartsplit")
+@Entity(tableName = "smartsplits")
 @TypeConverters(DateTimeConverters::class)
-data class SmartSplit(
+data class SmartSplits(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "amountOwed") val amountOwed: Double,
     @ColumnInfo(name = "isPaid") val isPaid: Boolean = false,
