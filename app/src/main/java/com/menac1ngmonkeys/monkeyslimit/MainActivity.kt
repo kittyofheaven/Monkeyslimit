@@ -1,6 +1,7 @@
 package com.menac1ngmonkeys.monkeyslimit
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,9 +15,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.AppFAB
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.*
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.BottomBar
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavGraph
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
@@ -26,11 +29,94 @@ import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDialog
 
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateToTopLevel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import java.util.Date
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // awal test database
+//        lifecycleScope.launch {
+//            val appContainer = (application as MonkeyslimitApplication).container
+//
+//            // When id is set to autoGenerate = true, we pass 0. Room will generate a new ID.
+//
+//            // Test Budgets
+//            val budgetsRepository = appContainer.budgetsRepository
+//            val newBudget = Budgets(id = 0, name = "Monthly Budget", amount = 500.0, limitAmount = 1000.0, startDate = Date(), endDate = null, note = "Monthly expense budget")
+//            val budgetId = budgetsRepository.insert(newBudget).toInt()
+//            Log.d("DB_TEST", "Inserted Budget ID: $budgetId")
+//            val budgetToUpdate = budgetsRepository.getBudgetById(budgetId).first()
+//            budgetsRepository.update(budgetToUpdate.copy(limitAmount = 1200.0))
+//            Log.d("DB_TEST", "Updated Budget: ${budgetsRepository.getBudgetById(budgetId).first()}")
+//
+//            // Test Categories
+//            val categoriesRepository = appContainer.categoriesRepository
+//            val newCategory = Categories(id = 0, name = "Food", icon = "restaurant", description = "For food and groceries")
+//            val categoryId = categoriesRepository.insert(newCategory).toInt()
+//            Log.d("DB_TEST", "Inserted Category ID: $categoryId")
+//            val categoryToUpdate = categoriesRepository.getCategoryById(categoryId).first()
+//            categoriesRepository.update(categoryToUpdate.copy(name = "Groceries"))
+//            Log.d("DB_TEST", "Updated Category: ${categoriesRepository.getCategoryById(categoryId).first()}")
+//
+//            // Test Transactions
+//            val transactionsRepository = appContainer.transactionsRepository
+//            val newTransaction = Transactions(id = 0, date = Date(), totalAmount = 50.0, budgetId = budgetId, categoryId = categoryId, note = "Lunch", imagePath = null)
+//            val transactionId = transactionsRepository.insert(newTransaction).toInt()
+//            Log.d("DB_TEST", "Inserted Transaction ID: $transactionId")
+//            val transactionToUpdate = transactionsRepository.getTransactionById(transactionId).first()
+//            transactionsRepository.update(transactionToUpdate.copy(totalAmount = 55.0))
+//            Log.d("DB_TEST", "Updated Transaction: ${transactionsRepository.getTransactionById(transactionId).first()}")
+//
+//            // Test SmartSplits
+//            val smartSplitsRepository = appContainer.smartSplitsRepository
+//            val newSmartSplit = SmartSplits(id = 0, amountOwed = 25.0, createDate = Date())
+//            val smartSplitId = smartSplitsRepository.insert(newSmartSplit).toInt()
+//            Log.d("DB_TEST", "Inserted SmartSplit ID: $smartSplitId")
+//            val smartSplitToUpdate = smartSplitsRepository.getSmartSplitById(smartSplitId).first()
+//            smartSplitsRepository.update(smartSplitToUpdate.copy(isPaid = true))
+//            Log.d("DB_TEST", "Updated SmartSplit: ${smartSplitsRepository.getSmartSplitById(smartSplitId).first()}")
+//
+//            // Test Items
+//            val itemsRepository = appContainer.itemsRepository
+//            val newItem = Items(id = 0, smartSplitId = smartSplitId, name = "Test Item", quantity = 1, totalPrice = 100.0)
+//            val itemId = itemsRepository.insert(newItem).toInt()
+//            Log.d("DB_TEST", "Inserted Item ID: $itemId")
+//            val itemToUpdate = itemsRepository.getItemById(itemId).first()
+//            itemsRepository.update(itemToUpdate.copy(quantity = 2))
+//            Log.d("DB_TEST", "Updated Item: ${itemsRepository.getItemById(itemId).first()}")
+//
+//            // Test Members
+//            val membersRepository = appContainer.membersRepository
+//            val newMember = Members(id = 0, smartSplitId = smartSplitId, name = "John Doe", contact = "555-1234", note = "Friend")
+//            val memberId = membersRepository.insert(newMember).toInt()
+//            Log.d("DB_TEST", "Inserted Member ID: $memberId")
+//            val memberToUpdate = membersRepository.getMemberById(memberId).first()
+//            membersRepository.update(memberToUpdate.copy(name = "Jane Doe"))
+//            Log.d("DB_TEST", "Updated Member: ${membersRepository.getMemberById(memberId).first()}")
+//
+//            // Test MemberItems
+//            val memberItemsRepository = appContainer.memberItemsRepository
+//            val newMemberItem = MemberItems(id = 0, memberId = memberId, itemId = itemId, price = 50.0, quantity = 1)
+//            val memberItemId = memberItemsRepository.insert(newMemberItem).toInt()
+//            Log.d("DB_TEST", "Inserted MemberItem ID: $memberItemId")
+//            // Note: MemberItems doesn't have a standard update method, skipping update test.
+//
+//            // Test Notifications
+//            val notificationsRepository = appContainer.notificationsRepository
+//            val newNotification = Notifications(id = 0, title = "Test Notification", description = "This is a test", date = Date())
+//            val notificationId = notificationsRepository.insert(newNotification).toInt()
+//            Log.d("DB_TEST", "Inserted Notification ID: $notificationId")
+//            val notificationToUpdate = notificationsRepository.getNotificationById(notificationId).first()
+//            notificationsRepository.update(notificationToUpdate.copy(isCompleted = true))
+//            Log.d("DB_TEST", "Updated Notification: ${notificationsRepository.getNotificationById(notificationId).first()}")
+//
+//        }
+        // akhir test database
+
         setContent {
             MonkeyslimitTheme {
                     MonkeysLimitApp()
