@@ -56,3 +56,20 @@ fun NavHostController.navigateSingleTopTo(route: String) {
         restoreState = true
     }
 }
+
+/**
+ * Navigates to a top-level destination and clears the entire back stack
+ * for that tab. This is useful for resetting the state when the user
+ * re-selects the currently active bottom nav item.
+ *
+ * @param route The route to navigate to.
+ */
+fun NavHostController.navigateToTopLevelWithClearStack(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            inclusive = true // This is the magic! It pops the start destination too.
+        }
+        launchSingleTop = true
+        // No need for saveState/restoreState because we are intentionally clearing state.
+    }
+}
