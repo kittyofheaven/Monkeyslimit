@@ -8,7 +8,7 @@ class NotificationsRepository(private val notificationsDao: NotificationsDao) {
 
     fun getAllNotifications(): Flow<List<Notifications>> = notificationsDao.getAllNotifications()
 
-    fun getNotificationById(id: Int): Flow<Notifications> = notificationsDao.getNotificationById(id)
+    fun getNotificationById(id: Int): Flow<Notifications?> = notificationsDao.getNotificationById(id)
 
     suspend fun insert(notifications: Notifications): Long {
         return notificationsDao.insert(notifications)

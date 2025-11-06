@@ -18,7 +18,7 @@ interface NotificationsDao {
     fun getAllNotifications(): Flow<List<Notifications>>
 
     @Query("SELECT * FROM notifications WHERE id = :id")
-    fun getNotificationById(id: Int): Flow<Notifications>
+    fun getNotificationById(id: Int): Flow<Notifications?>
 
     @Update
     suspend fun update(notifications: Notifications)

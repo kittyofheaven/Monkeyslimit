@@ -18,7 +18,7 @@ interface TransactionsDao {
     fun getAllTransactions(): Flow<List<Transactions>>
 
     @Query("SELECT * FROM transactions WHERE id = :id")
-    fun getTransactionById(id: Int): Flow<Transactions>
+    fun getTransactionById(id: Int): Flow<Transactions?>
 
     @Update
     suspend fun update(transactions: Transactions)

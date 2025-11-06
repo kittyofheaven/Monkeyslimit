@@ -18,7 +18,7 @@ interface SmartSplitsDao {
     fun getAllSmartSplits(): Flow<List<SmartSplits>>
 
     @Query("SELECT * FROM smartsplits WHERE id = :id")
-    fun getSmartSplitById(id: Int): Flow<SmartSplits>
+    fun getSmartSplitById(id: Int): Flow<SmartSplits?>
 
     @Update
     suspend fun update(smartSplits: SmartSplits)

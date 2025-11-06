@@ -18,7 +18,7 @@ interface MembersDao {
     fun getAllMembers(): Flow<List<Members>>
 
     @Query("SELECT * FROM members WHERE id = :id")
-    fun getMemberById(id: Int): Flow<Members>
+    fun getMemberById(id: Int): Flow<Members?>
 
     @Update
     suspend fun update(members: Members)

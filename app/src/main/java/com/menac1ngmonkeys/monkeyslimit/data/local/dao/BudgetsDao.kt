@@ -18,7 +18,7 @@ interface BudgetsDao {
     fun getAllBudgets(): Flow<List<Budgets>>
 
     @Query("SELECT * FROM budgets WHERE id = :id")
-    fun getBudgetById(id: Int): Flow<Budgets>
+    fun getBudgetById(id: Int): Flow<Budgets?>
 
     @Update
     suspend fun update(budgets: Budgets)
