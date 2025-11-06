@@ -8,7 +8,7 @@ class CategoriesRepository(private val categoriesDao: CategoriesDao) {
 
     fun getAllCategories(): Flow<List<Categories>> = categoriesDao.getAllCategories()
 
-    fun getCategoryById(id: Int): Flow<Categories> = categoriesDao.getCategoryById(id)
+    fun getCategoryById(id: Int): Flow<Categories?> = categoriesDao.getCategoryById(id)
 
     suspend fun insert(categories: Categories): Long {
         return categoriesDao.insert(categories)

@@ -8,7 +8,7 @@ class TransactionsRepository(private val transactionsDao: TransactionsDao) {
 
     fun getAllTransactions(): Flow<List<Transactions>> = transactionsDao.getAllTransactions()
 
-    fun getTransactionById(id: Int): Flow<Transactions> = transactionsDao.getTransactionById(id)
+    fun getTransactionById(id: Int): Flow<Transactions?> = transactionsDao.getTransactionById(id)
 
     suspend fun insert(transactions: Transactions): Long {
         return transactionsDao.insert(transactions)

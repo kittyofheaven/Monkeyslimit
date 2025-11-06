@@ -8,7 +8,7 @@ class BudgetsRepository(private val budgetsDao: BudgetsDao) {
 
     fun getAllBudgets(): Flow<List<Budgets>> = budgetsDao.getAllBudgets()
 
-    fun getBudgetById(id: Int): Flow<Budgets> = budgetsDao.getBudgetById(id)
+    fun getBudgetById(id: Int): Flow<Budgets?> = budgetsDao.getBudgetById(id)
 
     suspend fun insert(budgets: Budgets): Long {
         return budgetsDao.insert(budgets)

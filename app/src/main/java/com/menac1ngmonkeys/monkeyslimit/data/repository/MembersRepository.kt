@@ -8,7 +8,7 @@ class MembersRepository(private val membersDao: MembersDao) {
 
     fun getAllMembers(): Flow<List<Members>> = membersDao.getAllMembers()
 
-    fun getMemberById(id: Int): Flow<Members> = membersDao.getMemberById(id)
+    fun getMemberById(id: Int): Flow<Members?> = membersDao.getMemberById(id)
 
     suspend fun insert(members: Members): Long {
         return membersDao.insert(members)

@@ -8,7 +8,7 @@ class ItemsRepository(private val itemsDao: ItemsDao) {
 
     fun getAllItems(): Flow<List<Items>> = itemsDao.getAllItems()
 
-    fun getItemById(id: Int): Flow<Items> = itemsDao.getItemById(id)
+    fun getItemById(id: Int): Flow<Items?> = itemsDao.getItemById(id)
 
     suspend fun insert(items: Items): Long {
         return itemsDao.insert(items)

@@ -18,7 +18,7 @@ interface ItemsDao {
     fun getAllItems(): Flow<List<Items>>
 
     @Query("SELECT * FROM items WHERE id = :id")
-    fun getItemById(id: Int): Flow<Items>
+    fun getItemById(id: Int): Flow<Items?>
 
     @Update
     suspend fun update(items: Items)

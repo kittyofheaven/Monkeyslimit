@@ -8,7 +8,7 @@ class SmartSplitsRepository(private val smartSplitsDao: SmartSplitsDao) {
 
     fun getAllSmartSplits(): Flow<List<SmartSplits>> = smartSplitsDao.getAllSmartSplits()
 
-    fun getSmartSplitById(id: Int): Flow<SmartSplits> = smartSplitsDao.getSmartSplitById(id)
+    fun getSmartSplitById(id: Int): Flow<SmartSplits?> = smartSplitsDao.getSmartSplitById(id)
 
     suspend fun insert(smartSplits: SmartSplits): Long {
         return smartSplitsDao.insert(smartSplits)
