@@ -27,9 +27,12 @@ import com.menac1ngmonkeys.monkeyslimit.ui.navigation.TopBar
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDialog
+import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
+import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
 
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateToTopLevel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -39,6 +42,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // awal test database
+        // Jalankan dev seeder hanya saat debug build untuk mengisi data dummy FE
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(this@MainActivity)
+                SeedCoordinator.seedDev(db)
+        }
 //        lifecycleScope.launch {
 //            val appContainer = (application as MonkeyslimitApplication).container
 //

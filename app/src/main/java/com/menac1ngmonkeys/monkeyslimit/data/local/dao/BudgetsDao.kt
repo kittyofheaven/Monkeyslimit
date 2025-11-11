@@ -14,11 +14,20 @@ interface BudgetsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(budgets: Budgets): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(budgets: List<Budgets>)
+
     @Query("SELECT * FROM budgets")
     fun getAllBudgets(): Flow<List<Budgets>>
 
+    @Query("SELECT * FROM budgets")
+    suspend fun getAllNow(): List<Budgets>
+
     @Query("SELECT * FROM budgets WHERE id = :id")
     fun getBudgetById(id: Int): Flow<Budgets?>
+
+    @Query("SELECT COUNT(*) FROM budgets")
+    suspend fun count(): Int
 
     @Update
     suspend fun update(budgets: Budgets)
