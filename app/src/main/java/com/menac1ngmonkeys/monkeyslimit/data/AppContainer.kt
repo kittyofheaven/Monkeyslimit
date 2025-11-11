@@ -2,7 +2,12 @@ package com.menac1ngmonkeys.monkeyslimit.data
 
 import android.content.Context
 import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
+import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.CategoriesSeeder
 import com.menac1ngmonkeys.monkeyslimit.data.repository.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 interface AppContainer {
     val budgetsRepository: BudgetsRepository
@@ -19,6 +24,15 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     private val database by lazy {
         AppDatabase.getDatabase(context)
+    }
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        // Seed categories if empty on app start
+        applicationScope.launch {
+            CategoriesSeeder.seed(database.categoriesDao())
+        }
     }
 
     override val budgetsRepository: BudgetsRepository by lazy {

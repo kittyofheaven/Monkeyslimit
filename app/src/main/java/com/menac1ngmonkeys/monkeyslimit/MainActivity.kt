@@ -53,14 +53,7 @@ class MainActivity : ComponentActivity() {
 //            budgetsRepository.update(budgetToUpdate.copy(limitAmount = 1200.0))
 //            Log.d("DB_TEST", "Updated Budget: ${budgetsRepository.getBudgetById(budgetId).first()}")
 //
-//            // Test Categories
-//            val categoriesRepository = appContainer.categoriesRepository
-//            val newCategory = Categories(id = 0, name = "Food", icon = "restaurant", description = "For food and groceries")
-//            val categoryId = categoriesRepository.insert(newCategory).toInt()
-//            Log.d("DB_TEST", "Inserted Category ID: $categoryId")
-//            val categoryToUpdate = categoriesRepository.getCategoryById(categoryId).first()
-//            categoriesRepository.update(categoryToUpdate.copy(name = "Groceries"))
-//            Log.d("DB_TEST", "Updated Category: ${categoriesRepository.getCategoryById(categoryId).first()}")
+//            // Test Categories // INI DIHILANGKAN KARENA UDAH ADA SEEDERS
 //
 //            // Test Transactions
 //            val transactionsRepository = appContainer.transactionsRepository

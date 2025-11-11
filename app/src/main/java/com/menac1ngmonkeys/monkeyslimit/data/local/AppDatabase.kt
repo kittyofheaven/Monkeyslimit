@@ -49,5 +49,13 @@ abstract class AppDatabase : RoomDatabase() {
                 instance
             }
         }
+
+        fun hardReset(context: Context) {
+            synchronized(this) {
+                INSTANCE?.close()
+                context.applicationContext.deleteDatabase("monkeyslimit_database")
+                INSTANCE = null
+            }
+        }
     }
 }
