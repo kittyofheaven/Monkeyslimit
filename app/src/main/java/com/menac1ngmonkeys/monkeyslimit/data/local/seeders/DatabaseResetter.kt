@@ -12,6 +12,7 @@ object DatabaseResetter {
     suspend fun resetAndReseed(context: Context) = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(context)
         db.clearAllTables()
-        CategoriesSeeder.seed(db.categoriesDao())
+        // Only reseed core data for all users (Categories)
+        SeedCoordinator.seedCore(db)
     }
 }

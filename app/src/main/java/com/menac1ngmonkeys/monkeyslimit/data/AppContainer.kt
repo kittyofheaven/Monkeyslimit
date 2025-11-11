@@ -29,9 +29,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // Seed categories if empty on app start
+        // Ensure core seeds (Categories) are present for all users
         applicationScope.launch {
-            CategoriesSeeder.seed(database.categoriesDao())
+            com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator.seedCore(database)
         }
     }
 

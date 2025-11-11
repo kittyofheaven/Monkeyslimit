@@ -14,8 +14,14 @@ interface TransactionsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(transactions: Transactions): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(transactions: List<Transactions>)
+
     @Query("SELECT * FROM transactions")
     fun getAllTransactions(): Flow<List<Transactions>>
+
+    @Query("SELECT COUNT(*) FROM transactions")
+    suspend fun count(): Int
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     fun getTransactionById(id: Int): Flow<Transactions?>

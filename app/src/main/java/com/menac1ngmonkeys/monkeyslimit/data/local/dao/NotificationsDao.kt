@@ -14,8 +14,14 @@ interface NotificationsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(notifications: Notifications): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(notifications: List<Notifications>)
+
     @Query("SELECT * FROM notifications")
     fun getAllNotifications(): Flow<List<Notifications>>
+
+    @Query("SELECT COUNT(*) FROM notifications")
+    suspend fun count(): Int
 
     @Query("SELECT * FROM notifications WHERE id = :id")
     fun getNotificationById(id: Int): Flow<Notifications?>

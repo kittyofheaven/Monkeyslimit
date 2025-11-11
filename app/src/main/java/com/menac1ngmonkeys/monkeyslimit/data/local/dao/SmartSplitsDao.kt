@@ -14,8 +14,14 @@ interface SmartSplitsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(smartSplits: SmartSplits): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(smartSplits: List<SmartSplits>)
+
     @Query("SELECT * FROM smartsplits")
     fun getAllSmartSplits(): Flow<List<SmartSplits>>
+
+    @Query("SELECT COUNT(*) FROM smartsplits")
+    suspend fun count(): Int
 
     @Query("SELECT * FROM smartsplits WHERE id = :id")
     fun getSmartSplitById(id: Int): Flow<SmartSplits?>
