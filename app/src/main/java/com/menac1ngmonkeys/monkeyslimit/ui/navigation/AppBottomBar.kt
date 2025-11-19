@@ -38,7 +38,7 @@ fun BottomBar(
     navItems: List<NavItem>,
     currentRoute: String?
 ) {
-    val cutoutShape = BottomBarCutoutShape(fabDiameter = CUTOUT_SIZE.dp)
+    val cutoutShape = bottomBarCutoutShape(fabDiameter = CUTOUT_SIZE.dp)
 
     Surface(
         modifier = Modifier
