@@ -47,7 +47,9 @@ fun DashboardScreenContent(
         )
         Spacer(Modifier.size(15.dp))
         // Main Container -- START --
-        MainContentContainer {
+        MainContentContainer(
+            modifier = Modifier.weight(1f)
+        ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {

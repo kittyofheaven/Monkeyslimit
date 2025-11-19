@@ -40,7 +40,7 @@ fun MarqueeText(
         }
     }
 
-    val animationSpec: InfiniteRepeatableSpec<Float> = if (isOverflowing) {
+    val animationSpec: InfiniteRepeatableSpec<Float>? = if (isOverflowing) {
         val diff = textLayoutInfo.value?.let { it.first - it.second } ?: 0
         val duration = 2000 // constant duration so that all animations start and ends at the same time
         val delay = 1500
@@ -63,23 +63,25 @@ fun MarqueeText(
             repeatMode = RepeatMode.Reverse
         )
     } else {
-        infiniteRepeatable(animation = keyframes { durationMillis = 1 })
+        null
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "MarqueeTransition")
+    val staticOffsetState = remember { mutableFloatStateOf(0f) }
 
     // We don't use 'targetValue' in animateFloat here because the keyframes
     // define the exact values at specific times.
-    val offsetX by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (isOverflowing) {
-            (textLayoutInfo.value!!.second - textLayoutInfo.value!!.first).toFloat()
-        } else {
-            0f
-        },
-        animationSpec = animationSpec,
-        label = "MarqueeOffsetX"
-    )
+    val offsetX by if (animationSpec != null) {
+        val targetOffset = textLayoutInfo.value?.let { it.second - it.first }?.toFloat() ?: 0f
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = targetOffset,
+            animationSpec = animationSpec,
+            label = "MarqueeOffsetX"
+        )
+    } else {
+        staticOffsetState
+    }
 
     Layout(
         content = {
