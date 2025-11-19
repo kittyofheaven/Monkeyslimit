@@ -1,12 +1,16 @@
 package com.menac1ngmonkeys.monkeyslimit
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -134,11 +139,11 @@ fun MonkeysLimitApp() {
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
     val topBarTitle = when (currentRoute) {
-        NavItem.Dashboard.route, null -> "Hi, Welcome"
-        else -> navItems.firstOrNull { it.route == currentRoute }?.title ?: "Hi, Welcome"
+        NavItem.Dashboard.route, null -> "Hi, Welcome Back"
+        else -> navItems.firstOrNull { it.route == currentRoute }?.title ?: "Hi, Welcome Back"
     }
     var showTransactionDialog by remember { mutableStateOf(false) }
-    // Create a list of routes that should NOT have a bottom bar.
+    // Create a list of routes that should NOT have a bottom bar and/or top bar.
     // This is scalable - if you add a new DialogItem, it's automatically included.
     val routesWithoutBottomBar = remember { DialogItem.DialogItems.map { it.route } }
     val showNavElements = currentRoute !in routesWithoutBottomBar
@@ -154,7 +159,10 @@ fun MonkeysLimitApp() {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+        ,
         topBar = {
             if (showNavElements) {
                 TopBar(
