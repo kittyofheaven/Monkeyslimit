@@ -40,7 +40,7 @@ sealed class NavItem (
     object Transaction : NavItem(
         route = "transaction",
         title = "Transaction",
-        iconId = R.drawable.transaction_scanner_40px
+        iconId = R.drawable.transactions
     )
 
     companion object {

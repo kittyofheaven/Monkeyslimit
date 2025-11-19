@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,9 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateToTopLevel
+
+const val CUTOUT_SIZE = 90f
 
 @Composable
 fun BottomBar(
@@ -33,17 +38,22 @@ fun BottomBar(
     navItems: List<NavItem>,
     currentRoute: String?
 ) {
-    val bottomBarShape = RoundedCornerShape(topStart = 60.dp, topEnd = 60.dp)
+    val cutoutShape = bottomBarCutoutShape(fabDiameter = CUTOUT_SIZE.dp)
 
     Surface(
-        shape = bottomBarShape,
-        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .clip(RoundedCornerShape(topStart = 60.dp, topEnd = 60.dp)),
+        shape = cutoutShape,
         tonalElevation = NavigationBarDefaults.Elevation,
         shadowElevation = NavigationBarDefaults.Elevation
     ) {
         Row(
             modifier = Modifier
-                .background(NavigationBarDefaults.containerColor) // NavBar BG Color
+                // NavBar BG Color
+                // 0xFF232121 (Dark Mode)
+                // 0xFF052224 (Light Mode)
+                .background(Color(0xFF232121))
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -55,7 +65,7 @@ fun BottomBar(
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(15.dp))
                             .background(
                                 if (selected)
                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) // NavItem Selected BG Color
@@ -80,7 +90,7 @@ fun BottomBar(
                         )
                     }
                 } else {
-                    Spacer(modifier = Modifier.width(80.dp)) // FAB space
+                    Spacer(modifier = Modifier.width(CUTOUT_SIZE.dp)) // FAB space
                 }
             }
         }
