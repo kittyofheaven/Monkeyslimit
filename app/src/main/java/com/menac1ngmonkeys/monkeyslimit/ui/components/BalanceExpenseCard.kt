@@ -41,8 +41,11 @@ fun BalanceExpenseCard(
         .setLanguage("in")  // "in" is the code for Indonesian
         .setRegion("ID")    // "ID" is the code for Indonesia
         .build()
-    var balanceExpenseRatio = (totalExpense / totalBalance).toFloat()
-    var balanceExpensePercentage = String.format(indonesianLocale,"%.2f%%", balanceExpenseRatio * 100f)
+    var balanceExpenseRatio = 0f
+    if (totalBalance != 0.0 && totalExpense != 0.0) {
+        balanceExpenseRatio = (totalExpense / totalBalance).toFloat()
+    }
+    val balanceExpensePercentage = String.format(indonesianLocale,"%.2f%%", balanceExpenseRatio * 100f)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
