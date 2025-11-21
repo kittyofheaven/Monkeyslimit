@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.compose.runtime)          // Compose runtime
     implementation(libs.androidx.compose.ui.graphics)      // Drawing & graphics
     implementation(libs.androidx.compose.ui.tooling.preview) // @Preview support
+    implementation(libs.androidx.compose.foundation.layout)
 
     // ---------------- Material Design ----------------
     implementation(libs.material)                         // Material 2 (View system)
