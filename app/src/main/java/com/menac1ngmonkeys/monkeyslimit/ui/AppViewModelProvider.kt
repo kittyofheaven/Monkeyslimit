@@ -3,7 +3,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.menac1ngmonkeys.monkeyslimit.MonkeyslimitApplication
-import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
