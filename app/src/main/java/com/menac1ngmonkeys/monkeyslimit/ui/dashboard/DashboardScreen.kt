@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.components.SavingsGoalCard
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
 // This is our new "dumb" composable. It just displays UI.
 @Composable

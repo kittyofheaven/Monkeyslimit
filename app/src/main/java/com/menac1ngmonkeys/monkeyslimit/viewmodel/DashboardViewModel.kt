@@ -1,4 +1,4 @@
-package com.menac1ngmonkeys.monkeyslimit.ui.dashboard
+package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,10 +8,10 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
+import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,21 +54,21 @@ class DashboardViewModel(
                     singleTransaction.toTransactionItemData(category = category)
                 }
 
-                DashboardUiState(
-                    totalBalance = totalBalance,
-                    totalExpense = totalExpense,
-                    recentTransactions = uiTransactionList
-                )
+            _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState(
+                totalBalance = totalBalance,
+                totalExpense = totalExpense,
+                recentTransactions = uiTransactionList
+            )
             }.stateIn( // 3. Convert the Flow into a StateFlow for the UI to collect
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000L),
-                initialValue = DashboardUiState() // The UI will show this initially
+                initialValue = _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState() // The UI will show this initially
             )
 
 }
 
 // This is a "translator" function. It converts a database object to a UI object.
-private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
+private fun Transactions.toTransactionItemData(category: Categories?): com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData {
     // If for some reason a category was not found, we'll use a default.
     val realCategory = category ?: Categories(
         id = 0,
@@ -94,7 +94,7 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
 //    Log.d("TransactionItemData", "realCategory.id: ${realCategory.id}")
 //    Log.d("TransactionItemData", "realCategory.name: ${realCategory.name}")
 
-    return TransactionItemData(
+    return _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData(
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(), // We use a helper for the date
