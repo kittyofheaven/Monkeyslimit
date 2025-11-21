@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
-import java.math.BigDecimal
+import java.util.Locale
 
 @Composable
 fun BalanceExpenseCard(
@@ -37,6 +37,13 @@ fun BalanceExpenseCard(
     totalBalance: Double,
     totalExpense: Double
 ) {
+    val indonesianLocale = Locale.Builder()
+        .setLanguage("in")  // "in" is the code for Indonesian
+        .setRegion("ID")    // "ID" is the code for Indonesia
+        .build()
+    var balanceExpenseRatio = (totalExpense / totalBalance).toFloat()
+    var balanceExpensePercentage = String.format(indonesianLocale,"%.2f%%", balanceExpenseRatio * 100f)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -71,41 +78,14 @@ fun BalanceExpenseCard(
                 .clip(
                     shape = RoundedCornerShape(50)
                 )
-                .background(MaterialTheme.colorScheme.primary)
+                .background(Color(0xFF444444))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(start = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "30%",
-                    color = Color.White,
-                    fontSize = TextUnit(12f, TextUnitType.Sp)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(0.8f)
-                        .clip(
-                            shape = RoundedCornerShape(50)
-                        )
-                        .background(Color(0xFF444444)) // Right pill 0xFF444444
-                        .padding(end = 10.dp)
-                    ,
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    Text(
-                        text = BigDecimal("20000.00").toRupiahFormat(),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = TextUnit(12f, TextUnitType.Sp),
-                        fontStyle = FontStyle.Italic
-                    )
-                }
-            }
+            BalanceExpenseBar(
+                balanceExpenseRatio = balanceExpenseRatio,
+                balanceExpensePercentage = balanceExpensePercentage,
+                totalBalance = totalBalance.toRupiahFormat(),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         Spacer(
             modifier = Modifier
@@ -126,7 +106,7 @@ fun BalanceExpenseCard(
             )
             Spacer(Modifier.size(5.dp))
             Text(
-                text = "30% Of Your Expenses, Looks Good.",
+                text = "$balanceExpensePercentage Of Total Balance, Looks Good.",
                 fontSize = TextUnit(
                     value = 12f,
                     type = TextUnitType.Sp
