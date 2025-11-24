@@ -3,6 +3,8 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.menac1ngmonkeys.monkeyslimit.MonkeyslimitApplication
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.AnalyticsViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
 object AppViewModelProvider {
@@ -15,7 +17,19 @@ object AppViewModelProvider {
                 budgetsRepository = monkeysLimitApplication().container.budgetsRepository
             )
         }
-
+        // Initializer for AppViewModel
+        initializer {
+            AppViewModel(
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository
+            )
+        }
+        // Initializer for AnalyticsViewModel
+        initializer {
+            AnalyticsViewModel(
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository
+            )
+        }
         // You'll add initializers for other ViewModels here in the future
     }
 }
