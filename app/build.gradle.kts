@@ -34,11 +34,16 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
+    }
+}
+
+// 👇 New recommended way instead of kotlinOptions { jvmTarget = "11" }
+kotlin {
+    compilerOptions {
+        // Match your Java target; use JVM_17 or JVM_11 as you prefer
+        jvmToolchain(11)
     }
 }
 
@@ -56,15 +61,21 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview) // @Preview support
     implementation(libs.androidx.compose.foundation.layout)
 
+    // ---------------- External Libraries ----------------
+    implementation(libs.vico.compose.m3) // Compose support for Vico charts
+
     // ---------------- Material Design ----------------
     implementation(libs.material)                         // Material 2 (View system)
     implementation(libs.androidx.compose.material3)       // Material 3 for Compose
+    implementation(libs.androidx.material.icons.extended)
 
     // ---------------- Navigation ----------------
     implementation(libs.androidx.navigation.compose)      // Navigation for Compose
 
     // ---------------- Data / Persistence (Room) ----------------
-    implementation(libs.androidx.room.runtime)            // Room runtime
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.runtime)            // Room runtime
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 
