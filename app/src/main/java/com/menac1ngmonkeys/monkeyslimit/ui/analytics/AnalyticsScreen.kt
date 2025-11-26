@@ -39,7 +39,14 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-
+/**
+ * Stateless analytics UI; shows chart, timeframe selector, and summaries.
+ *
+ * @param appUiState shared totals.
+ * @param analyticsUiState analytics data/series to render.
+ * @param onTimeframeSelected callback for timeframe changes.
+ * @param onDateRangeApplied callback for applying custom date filters.
+ */
 @Composable
 fun AnalyticsScreenContent(
     modifier: Modifier = Modifier,
@@ -108,7 +115,12 @@ fun AnalyticsScreenContent(
                         onDateRangeClick = {
                             showDateRangePicker = true
                         },
-                        filterLabel = filterLabel
+                        onRefreshClick = {
+                            if (filterLabel != null) {
+                                onDateRangeApplied(null, null)
+                            }
+                        },
+                        filterLabel = filterLabel,
                     ) {
                         Column(
                             modifier = Modifier
@@ -171,6 +183,12 @@ fun AnalyticsScreenContent(
 
 }
 
+/**
+ * ViewModel-backed analytics entry; wires callbacks to ViewModel actions.
+ *
+ * @param appViewModel provides shared totals.
+ * @param analyticsViewModel provides analytics data and actions.
+ */
 @Composable
 fun AnalyticsScreen(
     modifier: Modifier = Modifier,

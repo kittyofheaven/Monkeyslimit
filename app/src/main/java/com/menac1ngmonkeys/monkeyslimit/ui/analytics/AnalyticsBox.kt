@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.menac1ngmonkeys.monkeyslimit.ui.components.RefreshIconButton
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 
 /**
@@ -24,14 +26,14 @@ import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
  * area where a chart can be drawn.
  *
  * @param modifier The modifier to be applied to the container.
- * @param onSearchClick A callback function for when the search icon is clicked.
+ * @param onRefreshClick A callback function for when the search icon is clicked.
  * @param onDateRangeClick A callback function for when the date range icon is clicked.
  * @param content The composable content to be placed inside the main area, typically a chart.
  */
 @Composable
 fun AnalyticsBox(
     modifier: Modifier = Modifier,
-    onSearchClick: () -> Unit = {},
+    onRefreshClick: () -> Unit = {},
     onDateRangeClick: () -> Unit = {},
     filterLabel: String? = null,
     content: @Composable () -> Unit,
@@ -67,9 +69,8 @@ fun AnalyticsBox(
                 )
             }
             Row {
-                IconButton(onClick = onSearchClick) {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
-                }
+                RefreshIconButton(onClick = onRefreshClick)
+
                 IconButton(onClick = onDateRangeClick) {
                     Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Date Range")
                 }
