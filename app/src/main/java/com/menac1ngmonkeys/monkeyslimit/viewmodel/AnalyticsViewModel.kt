@@ -207,8 +207,13 @@ class AnalyticsViewModel(
                         val income = expense * 1.3
 
                         val endOfWeek = startOfWeek.plusDays(6)
-                        val monthName = startOfWeek.month.getDisplayName(TextStyle.SHORT, locale)
-                        val label = "${startOfWeek.dayOfMonth}–${endOfWeek.dayOfMonth} $monthName"
+                        val startMonthName = startOfWeek.month.getDisplayName(TextStyle.SHORT, locale)
+                        val endMonthName = endOfWeek.month.getDisplayName(TextStyle.SHORT, locale)
+                        val label = if (startMonthName == endMonthName) {
+                            "${startOfWeek.dayOfMonth}–${endOfWeek.dayOfMonth} $startMonthName"
+                        } else {
+                            "${startOfWeek.dayOfMonth} $startMonthName – ${endOfWeek.dayOfMonth} $endMonthName"
+                        }
                         // Example: "1–7 Jan"
 
                         ChartPoint(
