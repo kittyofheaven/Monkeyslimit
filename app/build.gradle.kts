@@ -31,19 +31,19 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
     }
 }
 
-// 👇 New recommended way instead of kotlinOptions { jvmTarget = "11" }
+// 👇 New recommended way instead of kotlinOptions { jvmTarget = "21" }
 kotlin {
     compilerOptions {
-        // Match your Java target; use JVM_17 or JVM_11 as you prefer
-        jvmToolchain(11)
+        // Match your Java target; upgraded to JVM_21
+        jvmToolchain(21)
     }
 }
 
