@@ -13,18 +13,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppFAB(
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    size: Dp = 60.dp,
+    offsetY: Dp = 45.dp,
+    offsetX: Dp = 0.dp
 ) {
     FloatingActionButton(
         onClick = onClick,
         shape = CircleShape,
         modifier = Modifier
-            .size(70.dp)
-            .offset(y = 50.dp)
+            .size(size)
+            .offset(y = offsetY, x = offsetX)
 //            .background(MaterialTheme.colorScheme.onBackground)
         ,
         elevation = FloatingActionButtonDefaults.elevation(

@@ -21,44 +21,49 @@ import androidx.compose.ui.unit.dp
 fun bottomBarCutoutShape(
     fabDiameter: Dp,
     cradleMargin: Dp = 8.dp,
-    cradleVerticalOffset: Dp = 0.dp
+    cradleVerticalOffset: Dp = 0.dp,
 ) = with(LocalDensity.current) {
-    // Convert all Dp to Px HERE (inside @Composable, outside GenericShape)
     val fabDiameterPx = fabDiameter.toPx()
+    val fabRadiusPx = fabDiameterPx / 2f
     val cradleMarginPx = cradleMargin.toPx()
     val cradleVerticalOffsetPx = cradleVerticalOffset.toPx()
 
-    // Now create the shape using the pixel values
-    GenericShape { size, _ ->
-        val fabRadiusPx = fabDiameterPx / 2f
+    // Cutout radius = FAB radius + margin → actual gap around FAB
+    val cradleRadiusPx = fabRadiusPx + cradleMarginPx
 
-        moveTo(0f, 0f)
-
+    GenericShape { size: Size, _: LayoutDirection ->
         val fabCenterX = size.width / 2f
 
-        val cradleMarginStart = fabCenterX - fabRadiusPx - cradleMarginPx
-        val cradleMarginEnd = fabCenterX + fabRadiusPx + cradleMarginPx
+        // Where the arc starts and ends on the top edge
+        val arcStartX = fabCenterX - cradleRadiusPx
+        val arcEndX = fabCenterX + cradleRadiusPx
 
-        val arcStart = fabCenterX - fabRadiusPx
-        val arcEnd = fabCenterX + fabRadiusPx
-
-        lineTo(cradleMarginStart, 0f)
-
+        // Rect that defines the cutout circle
         val cradleRect = Rect(
-            left = arcStart,
-            top = -fabRadiusPx + cradleVerticalOffsetPx,
-            right = arcEnd,
-            bottom = fabRadiusPx + cradleVerticalOffsetPx
+            left = arcStartX,
+            top = -cradleRadiusPx + cradleVerticalOffsetPx,
+            right = arcEndX,
+            bottom = cradleRadiusPx + cradleVerticalOffsetPx,
         )
 
+        // Start top-left
+        moveTo(0f, 0f)
+
+        // Flat segment until the left of the cutout
+        lineTo(arcStartX, 0f)
+
+        // Draw the semicircular cutout
         arcTo(
             rect = cradleRect,
             startAngleDegrees = 180f,
             sweepAngleDegrees = -180f,
-            forceMoveTo = false
+            forceMoveTo = false,
         )
 
-        lineTo(cradleMarginEnd, 0f)
+        // Flat segment after the cutout
+        lineTo(arcEndX, 0f)
+
+        // Complete the rectangle downwards
         lineTo(size.width, 0f)
         lineTo(size.width, size.height)
         lineTo(0f, size.height)
