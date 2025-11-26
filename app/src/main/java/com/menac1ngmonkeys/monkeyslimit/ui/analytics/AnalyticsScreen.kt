@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +38,11 @@ import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.state.Timeframe
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AnalyticsViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
+import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -58,9 +64,44 @@ fun AnalyticsScreenContent(
     val totalBalance = appUiState.totalBalance
     val totalExpense = appUiState.totalExpense
 
+    // Today at start-of-day in your system time zone
+    val today = LocalDate.now()
+
     // ✨ Date range picker state
     var showDateRangePicker by remember { mutableStateOf(false) }
-    val dateRangePickerState = rememberDateRangePickerState()
+    val dateRangePickerState = rememberDateRangePickerState(
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val candidateDate = Instant.ofEpochMilli(utcTimeMillis)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+
+                // Allow dates from past dates to today
+                return candidateDate <= today
+            }
+
+            override fun isSelectableYear(year: Int): Boolean {
+                // Optional: allow all years up to current year
+                val currentYear = LocalDate.now().year
+                return year <= currentYear
+            }
+        }
+    )
+
+    LaunchedEffect(showDateRangePicker) {
+        if (showDateRangePicker) {
+            val currentMonth = YearMonth.now()        // from your local zone
+            val monthStartMillis = currentMonth
+                .atDay(1)               // 1st of that month
+                .atStartOfDay(ZoneOffset.UTC)        // <-- UTC, not systemDefault()
+                .toInstant()
+                .toEpochMilli()
+
+            // Jump the calendar view back to the current month
+            dateRangePickerState.displayedMonthMillis = monthStartMillis
+        }
+    }
+
 
     // If filtered date is chosen, show a label
     val filterLabel = remember(
@@ -116,9 +157,11 @@ fun AnalyticsScreenContent(
                             showDateRangePicker = true
                         },
                         onRefreshClick = {
-                            if (filterLabel != null) {
-                                onDateRangeApplied(null, null)
-                            }
+                            // Always clear the custom range + picker selection
+                            onDateRangeApplied(null, null)
+
+                            // Reset the DateRangePicker so it opens with no selection
+                            dateRangePickerState.setSelection(null, null)
                         },
                         filterLabel = filterLabel,
                     ) {
