@@ -19,6 +19,16 @@ import java.util.Date
 import java.util.Locale
 
 // The ViewModel takes the Repository as a dependency
+/**
+ * Produces dashboard UI state by combining transactions, categories, and budgets.
+ *
+ * Sorts transactions, maps them to UI-friendly items, and emits them as [StateFlow].
+ *
+ * @param transactionsRepository source of transactions.
+ * @param categoriesRepository source of categories for labeling/icon mapping.
+ * @param budgetsRepository source of budgets (used for totals if needed).
+ * @property dashboardUiState live dashboard state consumed by the UI.
+ */
 class DashboardViewModel(
     private val transactionsRepository: TransactionsRepository,
     private val categoriesRepository: CategoriesRepository,
@@ -60,7 +70,13 @@ class DashboardViewModel(
 
 }
 
-// This is a "translator" function. It converts a database object to a UI object.
+/**
+ * Maps a database transaction to a UI model with formatted fields and icon.
+ * This is a "translator" function. It converts a database object to a UI object.
+ * 
+ * @param category category matched by transaction.categoryId (nullable).
+ * @return UI-ready transaction item for display.
+ */
 private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
     // If for some reason a category was not found, we'll use a default.
     val realCategory = category ?: Categories(

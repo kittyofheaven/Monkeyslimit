@@ -7,6 +7,10 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.AnalyticsViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
+/**
+ * Central ViewModel factory wiring repositories from the application container.
+ * Keeps UI code decoupled from concrete data implementations.
+ */
 object AppViewModelProvider {
     val Factory = viewModelFactory {
         // Initializer for DashboardViewModel
@@ -34,6 +38,11 @@ object AppViewModelProvider {
     }
 }
 
-// Helper function to get the application container
+/**
+ * Convenience accessor for the application instance inside CreationExtras.
+ * Helper function to get the application container
+ * 
+ * @return the app instance cast to [MonkeyslimitApplication].
+ */
 fun CreationExtras.monkeysLimitApplication(): MonkeyslimitApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MonkeyslimitApplication)

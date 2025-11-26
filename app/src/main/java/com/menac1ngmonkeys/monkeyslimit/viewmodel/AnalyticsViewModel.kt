@@ -55,6 +55,14 @@ private data class ChartPoint(
     val expense: Double,
 )
 
+/**
+ * Builds analytics screen state based on selected timeframe and optional date range filters.
+ *
+ * Aggregates transactions into chart points and surfaces totals, series values, and labels.
+ *
+ * @param transactionsRepository source of transaction data.
+ * @property analyticsUiState live analytics state for UI consumption.
+ */
 class AnalyticsViewModel(
     private val transactionsRepository: TransactionsRepository,
 ) : ViewModel() {
@@ -64,6 +72,11 @@ class AnalyticsViewModel(
     private val _customRange =
         MutableStateFlow<Pair<LocalDate?, LocalDate?>>(null to null)
 
+    /**
+     * Sets a custom inclusive date range filter.
+     * @param start nullable start date; if null, lower bound is open.
+     * @param end nullable end date; if null, upper bound is open.
+     */
     fun setCustomRange(start: LocalDate?, end: LocalDate?) {
         _customRange.value = start to end
     }
@@ -100,7 +113,8 @@ class AnalyticsViewModel(
         )
 
     /**
-     * Updates the selected timeframe for the analytics screen.
+     * Updates the selected timeframe bucket size for aggregation to the analytics screen.
+     * @param timeframe aggregation granularity.
      */
     fun selectTimeframe(timeframe: Timeframe) {
         _selectedTimeframe.update { timeframe }

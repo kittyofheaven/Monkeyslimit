@@ -30,6 +30,12 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
 // This is our new "dumb" composable. It just displays UI.
+/**
+ * Stateless dashboard UI; renders cards and lists from provided UI state.
+ *
+ * @param appUiState shared app-wide totals.
+ * @param dashboardUiState dashboard-specific feed content.
+ */
 @Composable
 fun DashboardScreenContent(
     modifier: Modifier = Modifier,
@@ -92,6 +98,12 @@ fun DashboardScreenContent(
 }
 
 // This is the "smart" composable that your app's navigation will use.
+/**
+ * ViewModel-backed dashboard entry; collects state and delegates to stateless content.
+ *
+ * @param dashboardViewModel injected ViewModel supplying dashboard state.
+ * @param appViewModel injected ViewModel supplying shared totals.
+ */
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,

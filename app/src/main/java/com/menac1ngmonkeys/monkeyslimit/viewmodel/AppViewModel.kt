@@ -10,6 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+/**
+ * Aggregates cross-screen app metrics (balance, expense) from budgets and transactions.
+ *
+ * Exposes a hot [StateFlow] for UI collection.
+ *
+ * @param transactionsRepository source of transaction data.
+ * @param budgetsRepository source of budget data.
+ * @property appUiState combined UI-facing totals for balance and expense.
+ */
 class AppViewModel(
     private val transactionsRepository: TransactionsRepository,
     private val budgetsRepository: BudgetsRepository
