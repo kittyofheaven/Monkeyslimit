@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import com.menac1ngmonkeys.monkeyslimit.utils.compactNumber
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 
 @Composable
@@ -39,6 +40,9 @@ fun BalExpSingular(
     // Add a "-" prefix only if it's an expense
     val prefix = if (isExpense) "-" else ""
     // --- End of logic ---
+
+    val isHundredMillionPlus = balExpData.amount >= 100_000_000
+    val isTenMillionPlus = balExpData.amount >= 10_000_000
 
     Column(
         modifier = Modifier
@@ -67,8 +71,19 @@ fun BalExpSingular(
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            text = prefix + balExpData.amount.toRupiahFormat(),
-            fontSize = TextUnit(20f, TextUnitType.Sp),
+            text =
+                if (isHundredMillionPlus) {
+                    prefix + balExpData.amount.toRupiahFormat()
+                    "${prefix}Rp${compactNumber(balExpData.amount)}"
+                } else {
+                    prefix + balExpData.amount.toRupiahFormat()
+                },
+            fontSize =
+                if (isTenMillionPlus) {
+                    TextUnit(18f, TextUnitType.Sp)
+                } else {
+                    TextUnit(20f, TextUnitType.Sp)
+                },
             fontWeight = FontWeight.Bold,
             color = amountColor
         )

@@ -8,7 +8,8 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
-import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -18,6 +19,16 @@ import java.util.Date
 import java.util.Locale
 
 // The ViewModel takes the Repository as a dependency
+/**
+ * Produces dashboard UI state by combining transactions, categories, and budgets.
+ *
+ * Sorts transactions, maps them to UI-friendly items, and emits them as [StateFlow].
+ *
+ * @param transactionsRepository source of transactions.
+ * @param categoriesRepository source of categories for labeling/icon mapping.
+ * @param budgetsRepository source of budgets (used for totals if needed).
+ * @property dashboardUiState live dashboard state consumed by the UI.
+ */
 class DashboardViewModel(
     private val transactionsRepository: TransactionsRepository,
     private val categoriesRepository: CategoriesRepository,
@@ -35,40 +46,38 @@ class DashboardViewModel(
         { transactions, categories, budgets ->
                 // Inside here, we have the list of `transactions`, `budgets`, and `categories`.
 
-                // For now, let's assume all transactions are expenses.
-                // Later, you might add a 'type' field to your Transactions entity
-                // to distinguish between income and expense.
-                val totalExpense = transactions.sumOf { it.totalAmount }
-
-                // TODO: You would get the total balance from an AccountsRepository in the same way
-                val totalBalance = budgets.sumOf { it.amount }
-
                 // Create a fast way to look up categories by their ID
                 val categoriesById = categories.associateBy { it.id }
 
+                val sortedTransactions = transactions.sortedByDescending { it.date }
+
                 // --- Convert the list for the UI ---
-                val uiTransactionList = transactions.map { singleTransaction ->
+                val uiTransactionList = sortedTransactions.map { singleTransaction ->
 
                     val category = categoriesById[singleTransaction.categoryId]
                     // For each transaction from the database, convert it to a UI-friendly format
                     singleTransaction.toTransactionItemData(category = category)
                 }
 
-            _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState(
-                totalBalance = totalBalance,
-                totalExpense = totalExpense,
-                recentTransactions = uiTransactionList
-            )
+                DashboardUiState(
+                    recentTransactions = uiTransactionList
+                )
             }.stateIn( // 3. Convert the Flow into a StateFlow for the UI to collect
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000L),
-                initialValue = _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardUiState() // The UI will show this initially
+                initialValue = DashboardUiState() // The UI will show this initially
             )
 
 }
 
-// This is a "translator" function. It converts a database object to a UI object.
-private fun Transactions.toTransactionItemData(category: Categories?): com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData {
+/**
+ * Maps a database transaction to a UI model with formatted fields and icon.
+ * This is a "translator" function. It converts a database object to a UI object.
+ * 
+ * @param category category matched by transaction.categoryId (nullable).
+ * @return UI-ready transaction item for display.
+ */
+private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
     // If for some reason a category was not found, we'll use a default.
     val realCategory = category ?: Categories(
         id = 0,
@@ -81,20 +90,20 @@ private fun Transactions.toTransactionItemData(category: Categories?): com.menac
     val icon = when (realCategory.name) {
         "Food and Beverages" -> R.drawable.food
         "Transport" -> R.drawable.directions_car_48px
-        "Shopping" -> R.drawable.expense
+        "Shopping" -> R.drawable.shopping_bag_48px
         "Bills" -> R.drawable.receipt_long_48px
         "Entertainment" -> R.drawable.playing_cards_48px
         "Health" -> R.drawable.heart_check_48px
-        "Education" -> R.drawable.expense
+        "Education" -> R.drawable.cognition_2_48px
         "Salary" -> R.drawable.salary
-        else -> R.drawable.savings_bold_48px
+        else -> R.drawable.paid_48px
     }
 
 //    Log.d("TransactionItemData", "iconResId: $icon")
 //    Log.d("TransactionItemData", "realCategory.id: ${realCategory.id}")
 //    Log.d("TransactionItemData", "realCategory.name: ${realCategory.name}")
 
-    return _root_ide_package_.com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData(
+    return TransactionItemData(
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(), // We use a helper for the date

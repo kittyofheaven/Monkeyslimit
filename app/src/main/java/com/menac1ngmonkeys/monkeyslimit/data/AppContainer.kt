@@ -9,6 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+/**
+ * Dependency container exposing app-level repository singletons.
+ *
+ * Implementations supply concrete data sources (Room, network, etc.).
+ */
 interface AppContainer {
     val budgetsRepository: BudgetsRepository
     val categoriesRepository: CategoriesRepository
@@ -20,6 +25,11 @@ interface AppContainer {
     val transactionsRepository: TransactionsRepository
 }
 
+/**
+ * Room-backed implementation of [AppContainer]; seeds core data at startup.
+ *
+ * @param context application context used to instantiate the database.
+ */
 class DefaultAppContainer(private val context: Context) : AppContainer {
 
     private val database by lazy {

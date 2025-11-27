@@ -24,16 +24,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.components.SavingsGoalCard
+import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
 // This is our new "dumb" composable. It just displays UI.
+/**
+ * Stateless dashboard UI; renders cards and lists from provided UI state.
+ *
+ * @param appUiState shared app-wide totals.
+ * @param dashboardUiState dashboard-specific feed content.
+ */
 @Composable
 fun DashboardScreenContent(
     modifier: Modifier = Modifier,
+    appUiState: AppUiState, // UI for all of the screens
     dashboardUiState: DashboardUiState, // It accepts the UI state directly
 ) {
-    val totalBalance = dashboardUiState.totalBalance
-    val totalExpense = dashboardUiState.totalExpense
+    val totalBalance = appUiState.totalBalance
+    val totalExpense = appUiState.totalExpense
 
     Column(
         modifier = modifier
@@ -56,10 +66,10 @@ fun DashboardScreenContent(
             ) {
                 // Savings Box -- START
                 SavingsGoalCard(
-                    currentSavings = dashboardUiState.totalBalance,
+                    currentSavings = appUiState.totalBalance,
                     savingsGoal = 50_000_000.0, // For now, we add it explicitly
-                    revenueLastWeek = dashboardUiState.totalExpense,
-                    foodExpenseLastWeek = dashboardUiState.totalExpense
+                    revenueLastWeek = appUiState.totalExpense,
+                    foodExpenseLastWeek = appUiState.totalExpense
                 )
                 // Savings Box -- END
 
@@ -88,20 +98,30 @@ fun DashboardScreenContent(
 }
 
 // This is the "smart" composable that your app's navigation will use.
+/**
+ * ViewModel-backed dashboard entry; collects state and delegates to stateless content.
+ *
+ * @param dashboardViewModel injected ViewModel supplying dashboard state.
+ * @param appViewModel injected ViewModel supplying shared totals.
+ */
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
     // Use the factory to create an instance of our ViewModel
-    viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    dashboardViewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    appViewModel: AppViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     // Collect the state from the ViewModel. Every time the state changes,
     // this Composable will automatically recompose with the new data.
-    val dashboardUiState by viewModel.dashboardUiState.collectAsState()
+    val dashboardUiState by dashboardViewModel.dashboardUiState.collectAsState()
+    val appUiState by appViewModel.appUiState.collectAsState()
+
 
     // Call our "dumb" UI composable and pass the real state to it
     DashboardScreenContent(
         modifier = modifier,
-        dashboardUiState = dashboardUiState
+        appUiState = appUiState,
+        dashboardUiState = dashboardUiState,
     )
 }
 
@@ -109,13 +129,18 @@ fun DashboardScreen(
 @Composable
 fun DashboardScreenPreview() {
     // 1. Create a fake state object with sample data.
-    val fakeUiState = DashboardUiState(
-        totalBalance = 15000000.0,
-        totalExpense = 2750000.0
+    val fakeDashboardUiState = DashboardUiState()
+
+    val fakeAppUiState = AppUiState(
+        totalBalance = 150.0,
+        totalExpense = 275.0
     )
 
     // 2. Call the stateless "Content" composable with the fake data.
     //    No ViewModel is created, so there will be no crash.
-    DashboardScreenContent(dashboardUiState = fakeUiState)
+    DashboardScreenContent(
+        dashboardUiState = fakeDashboardUiState,
+        appUiState = fakeAppUiState
+    )
 }
 
