@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base App Theme -->
+    <style name="Theme.Monkeyslimit" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Add this to ensure Compose can be seen immediately -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
 
-    <style name="Theme.Monkeyslimit" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <!-- Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
+        <!-- Use transparent icon here to let Compose logo "take over" -->
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Monkeyslimit</item>
+    </style>
 </resources>
