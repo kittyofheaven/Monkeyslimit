@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -53,13 +54,28 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)    // Lifecycle & coroutines
     implementation(libs.androidx.work.runtime.ktx)         // WorkManager (background tasks)
 
+    // ---------------- Firebase ----------------
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.google.auth)
+    implementation(libs.firebase.firestore)
+
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+//    implementation(libs.googleid)
+    implementation("com.google.android.libraries.identity.googleid:googleid:<latest version>")
+
+    implementation(libs.coil.compose)
+
     // ---------------- Jetpack Compose UI ----------------
     implementation(platform(libs.androidx.compose.bom))    // Compose BOM (align versions)
     implementation(libs.androidx.compose.ui)               // Core Compose UI
-    implementation(libs.androidx.compose.runtime)          // Compose runtime
     implementation(libs.androidx.compose.ui.graphics)      // Drawing & graphics
     implementation(libs.androidx.compose.ui.tooling.preview) // @Preview support
     implementation(libs.androidx.compose.foundation.layout)
+
+    // ---------------- Splashscreen ----------------
+    implementation(libs.androidx.core.splashscreen)
 
     // ---------------- External Libraries ----------------
     implementation(libs.vico.compose.m3) // Compose support for Vico charts
@@ -69,13 +85,26 @@ dependencies {
     implementation(libs.androidx.compose.material3)       // Material 3 for Compose
     implementation(libs.androidx.material.icons.extended)
 
+    // ---------------- CameraX ----------------
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+
+    implementation(libs.guava)
+
+    // ---------------- Permissions ----------------
+    implementation(libs.androidx.concurrent.futures.ktx)
+    implementation(libs.accompanist.permissions)
+
     // ---------------- Navigation ----------------
     implementation(libs.androidx.navigation.compose)      // Navigation for Compose
 
     // ---------------- Data / Persistence (Room) ----------------
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.runtime)            // Room runtime
+    implementation(libs.androidx.runtime)
+    implementation(libs.androidx.material3)            // Room runtime
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 

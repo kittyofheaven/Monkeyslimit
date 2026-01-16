@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import com.menac1ngmonkeys.monkeyslimit.data.local.dao.*
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.*
+import java.util.Date
 
 @Database(
     entities = [
@@ -16,11 +19,13 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.*
         MemberItems::class,
         Notifications::class,
         SmartSplits::class,
-        Transactions::class
+        Transactions::class,
+        User::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
+@TypeConverters(DateConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun budgetsDao(): BudgetsDao
@@ -31,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationsDao(): NotificationsDao
     abstract fun smartSplitsDao(): SmartSplitsDao
     abstract fun transactionsDao(): TransactionsDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
@@ -58,4 +64,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
     }
+}
+
+class DateConverter {
+    @TypeConverter
+    fun fromTimestamp(value: Long?): Date? = value?.let { Date(it) }
+
+    @TypeConverter
+    fun dateToTimestamp(date: Date?): Long? = date?.time
 }
