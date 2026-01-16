@@ -23,6 +23,7 @@ interface AppContainer {
     val notificationsRepository: NotificationsRepository
     val smartSplitsRepository: SmartSplitsRepository
     val transactionsRepository: TransactionsRepository
+    val usersRepository: UsersRepository
 }
 
 /**
@@ -75,5 +76,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val transactionsRepository: TransactionsRepository by lazy {
         TransactionsRepository(database.transactionsDao())
+    }
+
+    override val usersRepository: UsersRepository by lazy {
+        UsersRepository(database.userDao())
     }
 }
