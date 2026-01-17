@@ -26,6 +26,10 @@ interface TransactionsDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     fun getTransactionById(id: Int): Flow<Transactions?>
 
+    // Get all transactions for a specific budget
+    @Query("SELECT * FROM transactions WHERE budgetId = :budgetId ORDER BY date DESC")
+    fun getTransactionsByBudgetId(budgetId: Int): Flow<List<Transactions>>
+
     @Update
     suspend fun update(transactions: Transactions)
 

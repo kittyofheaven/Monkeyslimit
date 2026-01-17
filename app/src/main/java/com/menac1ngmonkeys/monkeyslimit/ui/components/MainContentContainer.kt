@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
  *                 to use modifiers like `fillMaxSize()` to ensure the container
  *                 takes up the appropriate space.
  * @param containerColor The background color of the container. Defaults to the
- *                       theme's surface color. You could also pass a Brush here
+ *                       theme's background color. You could also pass a Brush here
  *                       if you change the parameter type.
  * @param content The composable content to be placed inside the container. This
  *                content will be aligned to the top-start by default.
@@ -39,21 +39,21 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MainContentContainer(
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clip(
-                RoundedCornerShape(
-                    topStartPercent = 15,
-                    topEndPercent = 15,
-                )
-            )
+//            .clip(
+//                RoundedCornerShape(
+//                    topStartPercent = 15,
+//                    topEndPercent = 15,
+//                )
+//            )
             .background(containerColor)
             .padding(
-                top = 25.dp,
+                top = 0.dp,
                 start = 25.dp,
                 end = 25.dp,
                 bottom = 30.dp

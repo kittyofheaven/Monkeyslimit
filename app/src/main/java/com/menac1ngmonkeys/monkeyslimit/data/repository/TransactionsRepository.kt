@@ -10,6 +10,11 @@ class TransactionsRepository(private val transactionsDao: TransactionsDao) {
 
     fun getTransactionById(id: Int): Flow<Transactions?> = transactionsDao.getTransactionById(id)
 
+    // Get all transactions for a specific budget
+    fun getTransactionsByBudgetId(budgetId: Int): Flow<List<Transactions>> {
+        return transactionsDao.getTransactionsByBudgetId(budgetId)
+    }
+
     suspend fun insert(transactions: Transactions): Long {
         return transactionsDao.insert(transactions)
     }
