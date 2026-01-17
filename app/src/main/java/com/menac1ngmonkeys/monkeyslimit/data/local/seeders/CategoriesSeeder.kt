@@ -53,10 +53,16 @@ object CategoriesSeeder {
             ),
             Categories(
                 id = 0,
+                name = "Donation",
+                icon = null,
+                description = "Donasi: donasi perusahaan atau organisasi"
+            ),
+            Categories(
+                id = 0,
                 name = "Other",
                 icon = null,
                 description = "Lain-lain di luar kategori utama."
-            )
+            ),
         )
 
         categoriesDao.insertAll(defaultCategories)
