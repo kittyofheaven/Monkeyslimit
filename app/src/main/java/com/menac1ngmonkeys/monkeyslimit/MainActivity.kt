@@ -1,57 +1,307 @@
 package com.menac1ngmonkeys.monkeyslimit
 
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.view.WindowCompat
+import androidx.compose.ui.unit.dp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
+import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.LoginScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.SignUpScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.AppFAB
-import com.menac1ngmonkeys.monkeyslimit.data.local.entity.*
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.BottomBar
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavGraph
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.TopBar
+import com.menac1ngmonkeys.monkeyslimit.ui.splash.SplashScreenContent
+import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileAuthStatus
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDialog
-import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
-import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
-
-import com.menac1ngmonkeys.monkeyslimit.utils.navigateToTopLevel
-import kotlinx.coroutines.flow.first
+import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplashViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Date
 
 class MainActivity : ComponentActivity() {
+
+    private val splashViewModel: SplashViewModel by viewModels { AppViewModelProvider.Factory }
+    private val authViewModel: AuthViewModel by viewModels { AppViewModelProvider.Factory }
+    private val profileViewModel: ProfileViewModel by viewModels { AppViewModelProvider.Factory }
+
+    private fun getGoogleSignInClient() = GoogleSignIn.getClient(
+        this,
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+    ).apply {
+        signOut()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        var isReady = false
+
+        splashScreen.setKeepOnScreenCondition {
+            splashViewModel.uiState.value.isLoading || !isReady
+        }
+
         enableEdgeToEdge()
 
-        // awal test database
-        // Jalankan dev seeder hanya saat debug build untuk mengisi data dummy FE
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            // hard reset the user table
+//            val db = AppDatabase.getDatabase(this@MainActivity)
+//            db.clearAllTables()
+//        }
+
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@MainActivity)
-                SeedCoordinator.seedDev(db)
+            SeedCoordinator.seedDev(db)
         }
+
+        // Start Debug DB
+        // End Debug DB
+
+        setContent {
+            val context = LocalContext.current
+            isReady = true
+
+            val googleSignInLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                val task = getSignedInAccountFromIntent(result.data)
+                try {
+                    val account = task.getResult(ApiException::class.java)
+                    account.idToken?.let { authViewModel.signInWithGoogle(it) }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Sign-In failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            MonkeyslimitTheme {
+                AuthGatekeeper(
+                    authViewModel = authViewModel,
+                    splashViewModel = splashViewModel,
+                    profileViewModel = profileViewModel,
+                    onGoogleSignIn = {
+                        val client = getGoogleSignInClient()
+                        client.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(client.signInIntent)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AuthGatekeeper(
+    authViewModel: AuthViewModel,
+    splashViewModel: SplashViewModel,
+    profileViewModel: ProfileViewModel,
+    onGoogleSignIn: () -> Unit
+) {
+    val splashUiState by splashViewModel.uiState.collectAsState()
+    val authUiState by authViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    var isLoginScreen by remember { mutableStateOf(true) }
+    var showBranding by remember { mutableStateOf(true) }
+
+    // 1. Splash Logic
+    LaunchedEffect(splashUiState.isLoading) {
+        if (!splashUiState.isLoading) {
+            delay(1500)
+            showBranding = false
+        }
+    }
+
+    // 2. Sync Logic
+    LaunchedEffect(authUiState.currentUser) {
+        if (authUiState.currentUser != null) {
+            authViewModel.startRealtimeSync()
+        }
+    }
+
+    // --- DECISION LOGIC ---
+    if (showBranding) {
+        SplashScreenContent()
+        return
+    }
+
+    if (authUiState.currentUser == null) {
+        // Not Logged In
+        if (isLoginScreen) {
+            LoginScreen(
+                onGoogleSignIn = onGoogleSignIn,
+                onEmailSignIn = { e, p -> authViewModel.signInWithEmail(e, p) },
+                onNavigateToSignUp = { isLoginScreen = false }
+            )
+        } else {
+            SignUpScreen(
+                onNavigateToLogin = { isLoginScreen = true },
+                onEmailSignUp = { email, pass, fName, lName, phone, job, bDay, gender ->
+                    authViewModel.signUpWithEmail(email, pass, fName, lName, phone, job, bDay, gender)
+                }
+            )
+        }
+        return
+    }
+
+    Log.d("AuthGatekeeper", "Current Profile Status: ${profileUiState.status}")
+
+    // User is Logged In -> Check Sealed Status
+    when (profileUiState.status) {
+        is ProfileAuthStatus.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = AuthPrimaryGreen)
+            }
+        }
+        is ProfileAuthStatus.Ghost -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = AuthPrimaryGreen)
+                Text("Syncing data...", Modifier.padding(top=64.dp))
+            }
+        }
+        is ProfileAuthStatus.Incomplete -> {
+            CompleteProfileScreen(onComplete = {
+                Toast.makeText(context, "Welcome!", Toast.LENGTH_SHORT).show()
+            })
+        }
+        is ProfileAuthStatus.Verified -> {
+            MonkeysLimitApp()
+        }
+    }
+}
+
+@Composable
+fun MonkeysLimitApp() {
+    val navController = rememberNavController()
+    val bottomNavItems = NavItem.bottomNavItems
+    val topNavItems = NavItem.topNavItems
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val topBarTitle = when (currentRoute) {
+        NavItem.Dashboard.route, null -> "Hi, Welcome Back"
+        in topNavItems.map { it.route } -> topNavItems.first { it.route == currentRoute }.title
+        else -> bottomNavItems.firstOrNull { it.route == currentRoute }?.title ?: "Hi, Welcome Back"
+    }
+    var showTransactionDialog by remember { mutableStateOf(false) }
+
+    val routesWithoutBar = remember { DialogItem.DialogItems.map { it.route } }
+    val showNavElements = currentRoute !in routesWithoutBar
+    val showBottomBar =
+        currentRoute in bottomNavItems.map { it.route } &&
+        currentRoute != NavItem.SmartSplit.route
+
+    if (showTransactionDialog) {
+        TransactionDialog(
+            onDismiss = { showTransactionDialog = false },
+            onItemClick = { item ->
+                showTransactionDialog = false
+                navController.navigate(item.route)
+            }
+        )
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+        ,
+        topBar = {
+            if (showNavElements) {
+                TopBar(
+                    title = topBarTitle,
+                    currentRoute = currentRoute,
+                    onProfileClick = { navController.navigateSingleTopTo(NavItem.Profile.route) },
+                    onSettingsClick = { navController.navigateSingleTopTo(NavItem.Settings.route) },
+                    onNavigateUp = { navController.navigateUp() }
+                )
+            }
+        },
+        floatingActionButton = {
+            if (showNavElements && showBottomBar) {
+                AppFAB(onClick = { showTransactionDialog = true })
+            }
+        },
+        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
+        bottomBar = {
+            if (showNavElements && showBottomBar) {
+                BottomBar(navController, bottomNavItems, currentRoute)
+            }
+        }
+    ) { innerPadding ->
+        NavGraph(
+            navController = navController,
+            modifier = Modifier.padding(innerPadding)
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun MonkeysLimitAppPreview() {
+    MonkeysLimitApp()
+}
+
+// Debug DB
 //        lifecycleScope.launch {
 //            val appContainer = (application as MonkeyslimitApplication).container
 //
@@ -121,82 +371,4 @@ class MainActivity : ComponentActivity() {
 //            Log.d("DB_TEST", "Updated Notification: ${notificationsRepository.getNotificationById(notificationId).first()}")
 //
 //        }
-        // akhir test database
-
-        setContent {
-            MonkeyslimitTheme {
-                    MonkeysLimitApp()
-            }
-        }
-    }
-}
-
-@Composable
-fun MonkeysLimitApp() {
-    val navController = rememberNavController()
-    val navItems = NavItem.bottomNavItems
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val currentRoute = currentDestination?.route
-    val topBarTitle = when (currentRoute) {
-        NavItem.Dashboard.route, null -> "Hi, Welcome Back"
-        else -> navItems.firstOrNull { it.route == currentRoute }?.title ?: "Hi, Welcome Back"
-    }
-    var showTransactionDialog by remember { mutableStateOf(false) }
-    // Create a list of routes that should NOT have a bottom bar and/or top bar.
-    // This is scalable - if you add a new DialogItem, it's automatically included.
-    val routesWithoutBottomBar = remember { DialogItem.DialogItems.map { it.route } }
-    val showNavElements = currentRoute !in routesWithoutBottomBar
-
-    if (showTransactionDialog) {
-        TransactionDialog(
-            onDismiss = { showTransactionDialog = false },
-            onItemClick = { item ->
-                showTransactionDialog = false
-                navController.navigate(item.route)
-            }
-        )
-    }
-
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-        ,
-        topBar = {
-            if (showNavElements) {
-                TopBar(
-                    title = topBarTitle,
-                    currentRoute = currentRoute,
-                    onSettingsClick = {
-                        navController.navigateToTopLevel(NavItem.Settings.route)
-                    }
-                )
-            }
-        },
-        floatingActionButton = {
-            if (showNavElements) {
-                AppFAB(
-                    onClick = { showTransactionDialog = true }
-                )
-            }
-        },
-        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
-        bottomBar = {
-            if (showNavElements) {
-                BottomBar(navController, navItems, currentRoute)
-            }
-        }
-    ) { innerPadding ->
-        NavGraph(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun MonkeysLimitAppPreview() {
-    MonkeysLimitApp()
-}
+// akhir test DB
