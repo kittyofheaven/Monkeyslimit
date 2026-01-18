@@ -13,6 +13,12 @@ val LightGreen100 = Color(0xFFDFF7E2)
 val LightYellow = Color(0xFFFCBD09)
 val LightRed = Color(0xFFBF0003)
 
+val Wheat = Color(0xFF9E3B6)
+val Sunglow = Color(0xFFBCE6B)
+val GoldenRod = Color(0xFD5A007)
+val Avocado = Color(0xF6C8B08)
+val DrabDarkBrown = Color(0xF2B2202)
+
 //Dark mode
 val DarkBlack = Color(0xFF000000)
 val DarkGrey = Color(0xFF232121)

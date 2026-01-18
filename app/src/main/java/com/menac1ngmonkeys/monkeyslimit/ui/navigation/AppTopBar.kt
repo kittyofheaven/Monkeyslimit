@@ -3,10 +3,17 @@ package com.menac1ngmonkeys.monkeyslimit.ui.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +38,9 @@ import java.time.LocalDateTime
 fun TopBar(
     title: String,
     currentRoute: String?,
-    onSettingsClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onSettingsClick: ()-> Unit,
+    onNavigateUp: () -> Unit,
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -59,11 +68,24 @@ fun TopBar(
             }
         },
         actions = {
-            if (currentRoute != NavItem.Settings.route) {
+            if (currentRoute == NavItem.Dashboard.route) {
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         painter = painterResource(NavItem.Settings.iconId),
                         contentDescription = NavItem.Settings.title
+                    )
+                }
+            }
+        },
+        navigationIcon = {
+            val showBackArrow = currentRoute in NavItem.topNavItems.map { it.route } ||
+                    currentRoute == NavItem.SmartSplit.route
+
+            if (showBackArrow) {
+                IconButton(onClick = onNavigateUp) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back"
                     )
                 }
             }
@@ -91,6 +113,8 @@ private fun TopBarPreview() {
     TopBar(
         title = "Hi, Welcome Back",
         currentRoute = NavItem.Dashboard.route,
-        onSettingsClick = {}
+        onProfileClick = {},
+        onSettingsClick = {},
+        onNavigateUp = {},
     )
 }
