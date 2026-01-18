@@ -49,7 +49,7 @@ fun BottomBar(
     Surface(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surface)
-            .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
+//            .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
             .height(70.dp)
         ,
         shape = cutoutShape,
