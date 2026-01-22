@@ -30,7 +30,7 @@ fun BalanceExpenseBar(
     totalBalance: String,
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color(0xFF444444),
-    progressColor: Color = MaterialTheme.colorScheme.primary,
+    progressColor: Color = MaterialTheme.colorScheme.secondary,
     textColor: Color = MaterialTheme.colorScheme.onBackground,
     height: Dp = 25.dp,
     cornerRadius: Dp = 50.dp
