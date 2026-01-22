@@ -4,16 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardFilter
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,21 +39,30 @@ class DashboardViewModel(
     private val budgetsRepository: BudgetsRepository,
 ) : ViewModel() {
 
+    private val _filter = MutableStateFlow(DashboardFilter.ALL)
+
     // This is a "cold flow" that will emit a new list whenever the database changes.
     val dashboardUiState: StateFlow<DashboardUiState> =
         // This `combine` function looks at both lists at once.
         combine(
             flow = transactionsRepository.getAllTransactions(),
             flow2 = categoriesRepository.getAllCategories(),
-            flow3 = budgetsRepository.getAllBudgets()
+            flow3 = budgetsRepository.getAllBudgets(),
+            flow4 = _filter
         )
-        { transactions, categories, budgets ->
+        { transactions, categories, budgets, currentFilter ->
                 // Inside here, we have the list of `transactions`, `budgets`, and `categories`.
 
                 // Create a fast way to look up categories by their ID
                 val categoriesById = categories.associateBy { it.id }
 
-                val sortedTransactions = transactions.sortedByDescending { it.date }
+                val filteredTransactions = when (currentFilter) {
+                    DashboardFilter.ALL -> transactions
+                    DashboardFilter.INCOME -> transactions.filter { it.type == TransactionType.INCOME }
+                    DashboardFilter.EXPENSE -> transactions.filter { it.type == TransactionType.EXPENSE }
+                }
+
+                val sortedTransactions = filteredTransactions.sortedByDescending { it.date }
 
                 // --- Convert the list for the UI ---
                 val uiTransactionList = sortedTransactions.map { singleTransaction ->
@@ -60,13 +73,18 @@ class DashboardViewModel(
                 }
 
                 DashboardUiState(
-                    recentTransactions = uiTransactionList
+                    recentTransactions = uiTransactionList,
+                    currentFilter = currentFilter
                 )
             }.stateIn( // 3. Convert the Flow into a StateFlow for the UI to collect
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000L),
                 initialValue = DashboardUiState() // The UI will show this initially
             )
+
+    fun updateFilter(newFilter: DashboardFilter) {
+        _filter.update { newFilter }
+    }
 
 }
 
@@ -85,7 +103,7 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
         icon = null,
         description = null
     )
-    val isExpense = (realCategory.name != "Salary") // Simple logic: assume anything not salary is an expense
+    val isExpense = (this.type == TransactionType.EXPENSE) // Simple logic: assume anything not salary is an expense
 
     val icon = when (realCategory.name) {
         "Food and Beverages" -> R.drawable.food
