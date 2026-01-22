@@ -17,7 +17,7 @@ import java.util.Date
             parentColumns = ["id"],
             childColumns = ["budgetId"],
             onUpdate = ForeignKey.CASCADE,
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.SET_NULL // Changed: If budget deleted, keep transaction but remove link
         ),
         ForeignKey(
             entity = Categories::class,
@@ -36,6 +36,7 @@ data class Transactions(
     @ColumnInfo(name = "totalAmount") val totalAmount: Double,
     @ColumnInfo(name = "note") val note: String?,
     @ColumnInfo(name = "imagePath") val imagePath: String?,
-    @ColumnInfo(name = "budgetId") val budgetId: Int,
-    @ColumnInfo(name = "categoryId") val categoryId: Int
+    @ColumnInfo(name = "budgetId") val budgetId: Int?,
+    @ColumnInfo(name = "categoryId") val categoryId: Int,
+    @ColumnInfo(name = "type") val type: TransactionType = TransactionType.EXPENSE
 )

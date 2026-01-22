@@ -1,12 +1,16 @@
 package com.menac1ngmonkeys.monkeyslimit.data.repository
 
 import com.menac1ngmonkeys.monkeyslimit.data.local.dao.TransactionsDao
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import kotlinx.coroutines.flow.Flow
 
 class TransactionsRepository(private val transactionsDao: TransactionsDao) {
 
     fun getAllTransactions(): Flow<List<Transactions>> = transactionsDao.getAllTransactions()
+
+    fun getTransactionsByType(type: TransactionType): Flow<List<Transactions>> =
+        transactionsDao.getTransactionsByType(type)
 
     fun getTransactionById(id: Int): Flow<Transactions?> = transactionsDao.getTransactionById(id)
 

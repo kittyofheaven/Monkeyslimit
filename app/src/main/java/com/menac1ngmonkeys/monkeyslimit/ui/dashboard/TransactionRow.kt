@@ -61,7 +61,7 @@ fun TransactionRow(transaction: TransactionItemData, modifier: Modifier = Modifi
                 contentDescription = transaction.title,
                 // In dark mode, primary is Orange, in light mode, it's Green.
                 // Use secondary in light mode if you always want yellow/orange.
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
 
