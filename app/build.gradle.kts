@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
 //    implementation(libs.googleid)
-    implementation("com.google.android.libraries.identity.googleid:googleid:<latest version>")
+    implementation(libs.googleid)
 
     implementation(libs.coil.compose)
 
@@ -104,7 +104,8 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.runtime)
-    implementation(libs.androidx.material3)            // Room runtime
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.foundation)            // Room runtime
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 
