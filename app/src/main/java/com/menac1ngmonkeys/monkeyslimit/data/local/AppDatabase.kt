@@ -22,10 +22,10 @@ import java.util.Date
         Transactions::class,
         User::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
-@TypeConverters(DateConverter::class)
+@TypeConverters(DateConverter::class, Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun budgetsDao(): BudgetsDao
@@ -72,4 +72,16 @@ class DateConverter {
 
     @TypeConverter
     fun dateToTimestamp(date: Date?): Long? = date?.time
+}
+
+class Converters {
+    @TypeConverter
+    fun fromTransactionType(value: TransactionType): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toTransactionType(value: String): TransactionType {
+        return TransactionType.valueOf(value)
+    }
 }

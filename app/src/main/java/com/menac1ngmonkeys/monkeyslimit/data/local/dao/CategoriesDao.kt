@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -16,6 +17,10 @@ interface CategoriesDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(categories: List<Categories>)
+
+    // Filter by type (e.g., show only Income categories in dropdown)
+    @Query("SELECT * FROM categories WHERE type = :type")
+    fun getCategoriesByType(type: TransactionType): Flow<List<Categories>>
 
     @Query("SELECT * FROM categories")
     fun getAllCategories(): Flow<List<Categories>>
