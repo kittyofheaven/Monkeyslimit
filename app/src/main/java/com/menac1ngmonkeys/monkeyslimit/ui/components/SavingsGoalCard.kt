@@ -44,7 +44,7 @@ fun SavingsGoalCard(
             .fillMaxWidth()
             .height(130.dp) // Giving a fixed height improves layout stability
             .clip(RoundedCornerShape(20))
-            .background(MaterialTheme.colorScheme.primary)
+            .background(MaterialTheme.colorScheme.secondaryContainer)
             .padding(vertical = 5.dp, horizontal = 8.dp),
     ) {
         val progress = if (savingsGoal > 0) {
@@ -69,9 +69,9 @@ fun SavingsGoalCard(
                 IconWithProgressBorder(
                     size = 64.dp,
                     strokeWidth = 3.dp,
-                    progressColor = MaterialTheme.colorScheme.onPrimary,
-                    trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
-                    iconTint = MaterialTheme.colorScheme.onPrimary,
+                    progressColor = MaterialTheme.colorScheme.onSecondary,
+                    trackColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.3f),
+                    iconTint = MaterialTheme.colorScheme.onSecondary,
                     iconResId = R.drawable.savings_bold_48px,
                     progress = progress
                 )
@@ -80,7 +80,7 @@ fun SavingsGoalCard(
                     style = MaterialTheme.typography.labelLarge,
                     fontSize = TextUnit(12f, TextUnitType.Sp),
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.onSecondary,
                     lineHeight = 15.sp
                 )
             }
@@ -90,7 +90,7 @@ fun SavingsGoalCard(
                     .fillMaxHeight(0.8f)
                     .padding(horizontal = 4.dp),
                 thickness = 2.dp,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSecondary
             )
 
             // Right Side: Revenue and Expense Summaries
@@ -110,7 +110,7 @@ fun SavingsGoalCard(
                         .fillMaxWidth(0.9f)
                         .align(Alignment.CenterHorizontally),
                     thickness = 2.dp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSecondary
                 )
                 InfoRow(
                     iconResId = R.drawable.food,
@@ -145,7 +145,7 @@ private fun InfoRow(
             modifier = Modifier.weight(0.2f),
             painter = painterResource(iconResId),
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.onPrimary,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
         )
         Column(
             modifier = Modifier.weight(0.8f),
@@ -155,12 +155,12 @@ private fun InfoRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
 
             val (amountColor, prefix) = when (isExpense) {
                 true -> MaterialTheme.colorScheme.tertiary to "-"
-                false -> MaterialTheme.colorScheme.onPrimary to ""
+                false -> MaterialTheme.colorScheme.onSecondary to ""
             }
 
             Text(

@@ -3,6 +3,7 @@ package com.menac1ngmonkeys.monkeyslimit.ui.dashboard
 import AppViewModelProvider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,6 +32,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.components.SavingsGoalCard
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardFilter
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
@@ -41,9 +49,11 @@ fun DashboardScreenContent(
     modifier: Modifier = Modifier,
     appUiState: AppUiState, // UI for all of the screens
     dashboardUiState: DashboardUiState, // It accepts the UI state directly
+    onFilterSelected: (DashboardFilter) -> Unit = {}
 ) {
     val totalBalance = appUiState.totalBalance
     val totalExpense = appUiState.totalExpense
+    val totalIncome = appUiState.totalIncome
 
     Column(
         modifier = modifier
@@ -59,7 +69,8 @@ fun DashboardScreenContent(
         Spacer(Modifier.size(15.dp))
         // Main Container -- START --
         MainContentContainer(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -74,10 +85,21 @@ fun DashboardScreenContent(
                 // Savings Box -- END
 
                 Spacer(Modifier.size(15.dp))
-                Text(
-                    text = "This Week",
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Today",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+
+                    DashboardFilterRow(
+                        currentFilter = dashboardUiState.currentFilter,
+                        onFilterSelected = onFilterSelected
+                    )
+                }
                 Spacer(Modifier.size(8.dp))
 
                 LazyColumn(
@@ -90,11 +112,68 @@ fun DashboardScreenContent(
                     items(dashboardUiState.recentTransactions) { transaction ->
                         TransactionRow(transaction = transaction)
                     }
+                    item { Spacer(Modifier.size(20.dp)) }
                 }
+
             }
         }
         // Main Container -- END --
     }
+}
+
+@Composable
+fun DashboardFilterRow(
+    currentFilter: DashboardFilter,
+    onFilterSelected: (DashboardFilter) -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        FilterChipItem(
+            text = "All",
+            selected = currentFilter == DashboardFilter.ALL,
+            onClick = { onFilterSelected(DashboardFilter.ALL) }
+        )
+        FilterChipItem(
+            text = "Income",
+            selected = currentFilter == DashboardFilter.INCOME,
+            onClick = { onFilterSelected(DashboardFilter.INCOME) }
+        )
+        FilterChipItem(
+            text = "Expense",
+            selected = currentFilter == DashboardFilter.EXPENSE,
+            onClick = { onFilterSelected(DashboardFilter.EXPENSE) }
+        )
+    }
+}
+
+@Composable
+fun FilterChipItem(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text) },
+        leadingIcon = if (selected) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Done,
+                    contentDescription = null,
+                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                )
+            }
+        } else {
+            null
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
 }
 
 // This is the "smart" composable that your app's navigation will use.
@@ -122,6 +201,7 @@ fun DashboardScreen(
         modifier = modifier,
         appUiState = appUiState,
         dashboardUiState = dashboardUiState,
+        onFilterSelected = dashboardViewModel::updateFilter
     )
 }
 

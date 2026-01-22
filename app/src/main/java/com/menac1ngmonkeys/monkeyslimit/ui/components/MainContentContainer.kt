@@ -45,18 +45,18 @@ fun MainContentContainer(
     Box(
         modifier = modifier
             .fillMaxSize()
-//            .clip(
-//                RoundedCornerShape(
-//                    topStartPercent = 15,
-//                    topEndPercent = 15,
-//                )
-//            )
+            .clip(
+                RoundedCornerShape(
+                    topStartPercent = 15,
+                    topEndPercent = 15,
+                )
+            )
             .background(containerColor)
             .padding(
-                top = 0.dp,
+                top = 20.dp,
                 start = 25.dp,
                 end = 25.dp,
-                bottom = 30.dp
+//                bottom = 30.dp
             ),
         contentAlignment = Alignment.TopStart
     ) {

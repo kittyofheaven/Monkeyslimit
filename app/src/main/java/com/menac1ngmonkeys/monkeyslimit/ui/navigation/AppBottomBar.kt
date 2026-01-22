@@ -1,5 +1,7 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.navigation
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,6 +24,7 @@ import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,13 +45,21 @@ const val CUTOUT_SIZE = 60f
 fun BottomBar(
     navController: NavHostController,
     navItems: List<NavItem>,
-    currentRoute: String?
+    currentRoute: String?,
+    cutoutBackgroundColor: Color,
 ) {
+    // 1. Animate the color change to mask the race condition with screen transitions
+    val animatedCutoutColor by animateColorAsState(
+        targetValue = cutoutBackgroundColor,
+        animationSpec = tween(durationMillis = 700), // Slower animation to match/mask screen fade
+        label = "CutoutColorAnimation"
+    )
+
     val cutoutShape = bottomBarCutoutShape(fabDiameter = CUTOUT_SIZE.dp)
 
     Surface(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.surface)
+            .background(animatedCutoutColor)
 //            .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
             .height(70.dp)
         ,
@@ -61,7 +72,8 @@ fun BottomBar(
                 // NavBar BG Color
                 // 0xFF232121 (Dark Mode)
                 // 0xFF052224 (Light Mode)
-                .background(Color(0xFF232121))
+//                .background(Color(0xFF232121))
+                .background(MaterialTheme.colorScheme.inverseSurface)
                 .fillMaxWidth()
                 .padding(horizontal = 15.dp),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -101,9 +113,9 @@ fun BottomBar(
                                 painter = painterResource(item.iconId),
                                 contentDescription = item.title,
                                 tint = if (selected)
-                                    MaterialTheme.colorScheme.primary // NavItem Selected Icon Color
+                                    MaterialTheme.colorScheme.secondary // NavItem Selected Icon Color
                                 else
-                                    MaterialTheme.colorScheme.onSurfaceVariant // NavItem Icon Color
+                                    MaterialTheme.colorScheme.secondaryContainer // NavItem Icon Color
                             )
                         }
 
@@ -118,9 +130,9 @@ fun BottomBar(
                             fontSize = TextUnit(8f, TextUnitType.Sp),
                             color =
                                 if (selected) {
-                                    MaterialTheme.colorScheme.primary
+                                    MaterialTheme.colorScheme.secondary
                                 } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                    MaterialTheme.colorScheme.secondaryContainer
                                 }
                         )
 
