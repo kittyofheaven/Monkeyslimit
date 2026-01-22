@@ -2,6 +2,7 @@ package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
@@ -29,11 +30,17 @@ class AppViewModel(
             flow2 = budgetsRepository.getAllBudgets()
         )
         { transactions, budgets ->
-            val totalExpense = transactions.sumOf { it.totalAmount }
+            val totalExpense = transactions.sumOf { tx ->
+                if (tx.type == TransactionType.EXPENSE) tx.totalAmount else 0.0
+            }
+            val totalIncome = transactions.sumOf { tx ->
+                if (tx.type == TransactionType.INCOME) tx.totalAmount else 0.0
+            }
             val totalBalance = budgets.sumOf { it.amount }
 
             AppUiState(
                 totalExpense = totalExpense,
+                totalIncome = totalIncome,
                 totalBalance = totalBalance,
             )
         }.stateIn(

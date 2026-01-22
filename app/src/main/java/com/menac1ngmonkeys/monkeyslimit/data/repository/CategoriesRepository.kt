@@ -2,11 +2,15 @@ package com.menac1ngmonkeys.monkeyslimit.data.repository
 
 import com.menac1ngmonkeys.monkeyslimit.data.local.dao.CategoriesDao
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import kotlinx.coroutines.flow.Flow
 
 class CategoriesRepository(private val categoriesDao: CategoriesDao) {
 
     fun getAllCategories(): Flow<List<Categories>> = categoriesDao.getAllCategories()
+
+    fun getCategoriesByType(type: TransactionType): Flow<List<Categories>> =
+        categoriesDao.getCategoriesByType(type)
 
     fun getCategoryById(id: Int): Flow<Categories?> = categoriesDao.getCategoryById(id)
 

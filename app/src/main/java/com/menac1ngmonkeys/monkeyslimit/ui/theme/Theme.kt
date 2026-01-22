@@ -12,16 +12,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
+    // 1. PRIMARY: The Green color seen on the FAB and Income amounts
+    primary = Avocado,
+    onPrimary = LightWhite, // Text/Icon on top of primary (White on Green)
+
+    // 2. PRIMARY CONTAINER: The large Yellow background for the dashboard card
+    primaryContainer = Sunglow,
+    onPrimaryContainer = LightBlack, // Text inside the yellow card
+
+    // 3. SECONDARY: Used for Chips/Pills (like "Monthly", "Pantry" in the screenshot)
+    secondary = Sunglow, // Or LightYellow if you want it brighter
+    onSecondary = LightBlack,
+
+    // 4. SECONDARY CONTAINER: Lighter elements
+    secondaryContainer = Wheat,
+    onSecondaryContainer = LightBlack,
+
+    // 5. TERTIARY: Used for Expenses (Red text)
+    tertiary = PinkRed,
+    onTertiary = LightWhite,
+
+    // 6. BACKGROUND & SURFACE
     background = LightWhite,
-    onBackground = LightBlack,
+    onBackground = LightBlack, // Main text color
 
-    surface = LightGrey,
+    surface = LightWhite, // Card backgrounds
+    onSurface = LightBlack, // Text on cards
 
-    primary = LightGreen400,
-    onPrimary = LightWhite,
+    // 7. INVERSE (For the Bottom Navigation Bar which is dark)
+    inverseSurface = LightBlack,
+    inverseOnSurface = LightWhite,
+    inversePrimary = Avocado, // Primary color when on top of dark surface
 
-    secondary = LightYellow,
-    tertiary = LightRed
+    // 8. OUTLINES (Dividers, borders)
+    outline = LightGrey,
+    outlineVariant = LightGreen200
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -34,7 +59,7 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = DarkBlack,
 
     secondary = LightWhite,
-    tertiary = DarkRed
+    tertiary = PinkRed
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),

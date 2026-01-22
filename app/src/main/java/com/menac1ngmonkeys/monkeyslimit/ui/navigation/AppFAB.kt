@@ -11,6 +11,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AppFAB(
     onClick: () -> Unit,
+    iconId: Int,
     size: Dp = 60.dp,
     offsetY: Dp = 45.dp,
     offsetX: Dp = 0.dp
@@ -40,9 +42,13 @@ fun AppFAB(
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            painter = painterResource(NavItem.Transaction.iconId),
+            painter = painterResource(iconId),
             contentDescription = NavItem.Transaction.title,
-            tint = Color.White
+            tint = Color.White,
+            modifier = Modifier
+                .rotate(
+                    if (iconId != NavItem.Transaction.iconId) 0f else 0f
+                )
         )
     }
 }

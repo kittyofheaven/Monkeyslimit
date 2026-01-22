@@ -175,6 +175,8 @@ fun BudgetListScreenContent(
                             onClick = { onBudgetClick(budgetItem.id) }
                         )
                     }
+
+                    item { Spacer(Modifier.size(20.dp)) }
                 }
             }
         }

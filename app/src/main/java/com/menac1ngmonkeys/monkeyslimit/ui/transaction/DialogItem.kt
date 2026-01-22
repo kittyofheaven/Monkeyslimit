@@ -38,6 +38,8 @@ sealed class DialogItem (
         iconId = R.drawable.add_circle_40px
     )
 
+
+    // Ini ga dipake harusnya
     object AI : DialogItem (
         name = "AI",
         route = "ai",
@@ -45,9 +47,9 @@ sealed class DialogItem (
     )
 
     companion object {
-        val DialogItems = listOf(
-            AI,
-            Manual,
+        val FABMenu = listOf(
+//            AI,
+//            Manual,
             Gallery,
             Camera,
         )

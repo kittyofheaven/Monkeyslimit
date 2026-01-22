@@ -10,12 +10,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -53,7 +56,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.navigation.TopBar
 import com.menac1ngmonkeys.monkeyslimit.ui.splash.SplashScreenContent
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileAuthStatus
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
-import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ExpandableTransactionMenu
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDialog
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
@@ -232,23 +235,23 @@ fun AuthGatekeeper(
 @Composable
 fun MonkeysLimitApp() {
     val navController = rememberNavController()
-    val bottomNavItems = NavItem.bottomNavItems
-    val topNavItems = NavItem.topNavItems
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
-    val topBarTitle = when (currentRoute) {
-        NavItem.Dashboard.route, null -> "Hi, Welcome Back"
-        in topNavItems.map { it.route } -> topNavItems.first { it.route == currentRoute }.title
-        else -> bottomNavItems.firstOrNull { it.route == currentRoute }?.title ?: "Hi, Welcome Back"
-    }
     var showTransactionDialog by remember { mutableStateOf(false) }
 
-    val routesWithoutBar = remember { DialogItem.DialogItems.map { it.route } }
-    val showNavElements = currentRoute !in routesWithoutBar
-    val showBottomBar =
-        currentRoute in bottomNavItems.map { it.route } &&
-        currentRoute != NavItem.SmartSplit.route
+    val allNavItems = remember {
+        NavItem.mainNavItems + NavItem.subNavItems
+    }
+    val currentScreen = allNavItems.find { it.route == currentRoute }
+    val showTopBar = currentScreen?.showTopBar
+    val showBottomBar = currentScreen?.showBottomBar
+
+    val topBarTitle = if (currentScreen == NavItem.Dashboard) {
+        "Hi, Welcome Back"
+    } else {
+        currentScreen?.title ?: "Hi, Welcome Back..."
+    }
 
     if (showTransactionDialog) {
         TransactionDialog(
@@ -260,38 +263,88 @@ fun MonkeysLimitApp() {
         )
     }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-        ,
-        topBar = {
-            if (showNavElements) {
-                TopBar(
-                    title = topBarTitle,
-                    currentRoute = currentRoute,
-                    onProfileClick = { navController.navigateSingleTopTo(NavItem.Profile.route) },
-                    onSettingsClick = { navController.navigateSingleTopTo(NavItem.Settings.route) },
-                    onNavigateUp = { navController.navigateUp() }
+    var isMenuExpanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+            ,
+            topBar = {
+                if (showTopBar == true) {
+                    TopBar(
+                        title = topBarTitle,
+                        currentRoute = currentRoute,
+                        onProfileClick = { navController.navigateSingleTopTo(NavItem.Profile.route) },
+                        onSettingsClick = { navController.navigateSingleTopTo(NavItem.Settings.route) },
+                        onNavigateUp = { navController.navigateUp() }
+                    )
+                }
+            },
+            floatingActionButton = {
+//            if (showNavElements && showBottomBar) {
+//                AppFAB(onClick = { showTransactionDialog = true })
+//            }
+                if (showBottomBar == true) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        // The Capsule Menu
+                        ExpandableTransactionMenu(
+                            visible = isMenuExpanded,
+                            onItemClick = { item ->
+                                isMenuExpanded = false
+                                navController.navigate(item.route)
+                            }
+                        )
+
+                        // The Main FAB
+                        AppFAB(
+                            onClick = { isMenuExpanded = !isMenuExpanded },
+                            // Toggle between Plus and Close icon
+                            iconId = if (isMenuExpanded) R.drawable.close_40dp else NavItem.Transaction.iconId,
+                        )
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.Center,
+            bottomBar = {
+                if (showBottomBar == true) {
+                    BottomBar(
+                        navController = navController,
+                        navItems = NavItem.mainNavItems,
+                        currentRoute = currentRoute,
+                        cutoutBackgroundColor = if (currentRoute == NavItem.Dashboard.route) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    )
+                }
+            }
+        ) { innerPadding ->
+            NavGraph(
+                navController = navController,
+                modifier = Modifier.padding(innerPadding)
+            )
+
+            // 1. DISMISSAL LAYER
+            // This invisible box catches all clicks outside the FAB menu
+            if (isMenuExpanded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null // No ripple when clicking outside
+                        ) {
+                            isMenuExpanded = false
+                        }
                 )
             }
-        },
-        floatingActionButton = {
-            if (showNavElements && showBottomBar) {
-                AppFAB(onClick = { showTransactionDialog = true })
-            }
-        },
-        floatingActionButtonPosition = androidx.compose.material3.FabPosition.Center,
-        bottomBar = {
-            if (showNavElements && showBottomBar) {
-                BottomBar(navController, bottomNavItems, currentRoute)
-            }
         }
-    ) { innerPadding ->
-        NavGraph(
-            navController = navController,
-            modifier = Modifier.padding(innerPadding)
-        )
     }
 }
 

@@ -8,11 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.menac1ngmonkeys.monkeyslimit.ui.analytics.AnalyticsScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.budget.AddBudgetScreen
@@ -22,7 +26,13 @@ import com.menac1ngmonkeys.monkeyslimit.ui.profile.ProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.settings.SettingsScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SmartSplitScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ManualTransactionScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ReviewTransactionScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ScanTransactionScreen
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 /**
  * Sets up the **main navigation graph** for the Monkeyslimit app.
@@ -98,7 +108,7 @@ fun NavGraph(
                 navController.navigateSingleTopTo(NavItem.Dashboard.route)
             })
         }
-        composable(DialogItem.Gallery.route) {
+        composable(NavItem.GalleryTransaction.route) {
             // Temporary Gallery Screen
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -115,22 +125,51 @@ fun NavGraph(
                 }
             }
         }
-        composable(DialogItem.Camera.route) {
-            // Temporary Camera Screen
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("Camera Screen")
-                Button(
-                    onClick = {
-                        navController.navigateUp()
-                    }
-                ) {
-                    Text("Go Back")
+        composable(NavItem.ScanTransaction.route) {
+            ScanTransactionScreen(
+                onNavigateToManual = {
+                    navController.navigate(NavItem.ManualTransaction.route)
+                },
+                onImagePicked = { uri ->
+                    // 1. Encode the URI so it is safe to pass in the URL
+                    val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
+
+                    // 2. Navigate to Review Screen
+                    // We construct the route: "review_transaction/content%3A%2F%2Fmedia..."
+                    val route = NavItem.ReviewTransaction.route.replace("{imageUri}", encodedUri)
+                    navController.navigate(route)
                 }
+            )
+        }
+        composable(NavItem.ManualTransaction.route) {
+            ManualTransactionScreen(
+                onNavigateBack = { navController.navigateSingleTopTo(NavItem.Dashboard.route) }
+            )
+        }
+        composable(
+            route = NavItem.ReviewTransaction.route,
+            arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val imageUriString = backStackEntry.arguments?.getString("imageUri")
+
+            // Create ViewModel
+            val viewModel: ReviewTransactionViewModel = viewModel(
+                factory = AppViewModelProvider.Factory
+            )
+
+            // PASS THE URI TO VIEWMODEL IMMEDIATELY
+            LaunchedEffect(imageUriString) {
+                viewModel.setImageUri(imageUriString)
             }
+
+            ReviewTransactionScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.navigate(NavItem.Dashboard.route) {
+                        popUpTo(NavItem.Dashboard.route) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(DialogItem.AI.route) {
             // Temporary AI Screen
@@ -160,23 +199,6 @@ fun NavGraph(
                         Text("Gallery")
                     }
                 }
-                Button(
-                    onClick = {
-                        navController.navigateUp()
-                    }
-                ) {
-                    Text("Go Back")
-                }
-            }
-        }
-        composable(DialogItem.Manual.route) {
-            // Temporary Manual Screen
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text("Manual Screen")
                 Button(
                     onClick = {
                         navController.navigateUp()

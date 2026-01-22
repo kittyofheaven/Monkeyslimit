@@ -11,7 +11,9 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetDetailViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ManualTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplashViewModel
 
 /**
@@ -59,10 +61,27 @@ object AppViewModelProvider {
                 transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
             )
         }
+        // Initializer for ProfileViewModel
         initializer {
             ProfileViewModel(
                 usersRepository = monkeysLimitApplication().container.usersRepository
             ) // It has no dependencies for now
+        }
+        // Initializer for ReviewTransactionViewModel
+        initializer {
+            ReviewTransactionViewModel(
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository,
+                categoriesRepository = monkeysLimitApplication().container.categoriesRepository
+            )
+        }
+        // Initializer for ManualTransactionViewModel
+        initializer {
+            ManualTransactionViewModel(
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository,
+                categoriesRepository = monkeysLimitApplication().container.categoriesRepository
+            )
         }
         // You'll add initializers for other ViewModels here in the future
     }
