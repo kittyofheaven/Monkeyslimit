@@ -24,7 +24,11 @@ import com.menac1ngmonkeys.monkeyslimit.ui.budget.BudgetScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.profile.ProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.settings.SettingsScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.ReviewSmartSplitScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SelectMemberScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SmartSplitScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SplitResultScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftMember
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.DialogItem
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ManualTransactionScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ReviewTransactionScreen
@@ -88,8 +92,46 @@ fun NavGraph(
         }
         composable(NavItem.SmartSplit.route) {
             SmartSplitScreen(
-                onGalleryClick = {},
-                onManualEntryClick = {},
+                onImagePicked = { uri ->
+                    val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
+                    // Reference the NavItem and replace the placeholder
+                    val route = NavItem.ReviewSmartSplit.route.replace("{imageUri}", encodedUri)
+                    navController.navigate(route)
+                }
+            )
+        }
+        composable(
+            route = NavItem.ReviewSmartSplit.route,
+            arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val imageUri = backStackEntry.arguments?.getString("imageUri")
+            ReviewSmartSplitScreen(
+                imageUri = imageUri,
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = NavItem.SelectMember.route
+        ) { backStackEntry ->
+            val excludeString = backStackEntry.arguments?.getString("exclude") ?: ""
+            val excludedList = if (excludeString.isNotBlank()) excludeString.split(",").map { it.trim() } else emptyList()
+
+            SelectMemberScreen(
+                excludedNames = excludedList,
+                onNavigateBack = { navController.popBackStack() },
+                onSelectionConfirmed = { selectedMembers -> // selectedMembers is ArrayList<Members>
+                    // MAP Members -> DraftMember (Parcelable)
+                    val draftMembers = selectedMembers.map {
+                        DraftMember(it.id, it.name, it.contact, it.note)
+                    }
+
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("selected_members", ArrayList(draftMembers))
+
+                    navController.popBackStack()
+                }
             )
         }
         composable(NavItem.Analytics.route) {
@@ -165,6 +207,16 @@ fun NavGraph(
             ReviewTransactionScreen(
                 viewModel = viewModel,
                 onNavigateBack = {
+                    navController.navigate(NavItem.Dashboard.route) {
+                        popUpTo(NavItem.Dashboard.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(NavItem.SplitResult.route) {
+            SplitResultScreen(
+                navController = navController,
+                onNavigateHome = {
                     navController.navigate(NavItem.Dashboard.route) {
                         popUpTo(NavItem.Dashboard.route) { inclusive = true }
                     }

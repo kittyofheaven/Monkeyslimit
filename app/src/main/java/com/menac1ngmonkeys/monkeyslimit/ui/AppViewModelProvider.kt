@@ -13,8 +13,12 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ManualTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewSmartSplitViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.ScanTransactionViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SelectMemberViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplashViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplitResultViewModel
 
 /**
  * Central ViewModel factory wiring repositories from the application container.
@@ -67,6 +71,10 @@ object AppViewModelProvider {
                 usersRepository = monkeysLimitApplication().container.usersRepository
             ) // It has no dependencies for now
         }
+        // Initializer for ScanTransactionViewModel
+        initializer {
+            ScanTransactionViewModel()
+        }
         // Initializer for ReviewTransactionViewModel
         initializer {
             ReviewTransactionViewModel(
@@ -81,6 +89,25 @@ object AppViewModelProvider {
                 transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
                 budgetsRepository = monkeysLimitApplication().container.budgetsRepository,
                 categoriesRepository = monkeysLimitApplication().container.categoriesRepository
+            )
+        }
+        // Initializer for ReviewSmartSplitViewModel
+        initializer {
+            ReviewSmartSplitViewModel()
+        }
+        // Initializer for SplitResultViewModel
+        initializer {
+            SplitResultViewModel(
+                smartSplitsRepository = monkeysLimitApplication().container.smartSplitsRepository,
+                membersRepository = monkeysLimitApplication().container.membersRepository,
+                itemsRepository = monkeysLimitApplication().container.itemsRepository,
+                memberItemsRepository = monkeysLimitApplication().container.memberItemsRepository
+            )
+        }
+        // Initializer for SelectMemberViewModel
+        initializer {
+            SelectMemberViewModel(
+                membersRepository = monkeysLimitApplication().container.membersRepository
             )
         }
         // You'll add initializers for other ViewModels here in the future
