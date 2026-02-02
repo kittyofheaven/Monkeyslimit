@@ -8,7 +8,16 @@ import  java.util.Date
 @TypeConverters(DateTimeConverters::class)
 data class SmartSplits(
     @PrimaryKey(autoGenerate = true) val id: Int,
+    @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "amountOwed") val amountOwed: Double,
+
+    @ColumnInfo(name = "imagePath") val imagePath: String? = null,
+
+    @ColumnInfo(name = "tax") val tax: Double = 0.0,
+    @ColumnInfo(name = "service") val service: Double = 0.0,
+    @ColumnInfo(name = "discount") val discount: Double = 0.0,
+    @ColumnInfo(name = "others") val others: Double = 0.0,
+
     @ColumnInfo(name = "isPaid") val isPaid: Boolean = false,
     @ColumnInfo(name = "createdDate") val createDate: Date
 )

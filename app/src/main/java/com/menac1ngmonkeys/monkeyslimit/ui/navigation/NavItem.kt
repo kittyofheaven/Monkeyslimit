@@ -73,6 +73,30 @@ sealed class NavItem (
         showTopBar = true
     )
 
+    object ReviewSmartSplit : NavItem(
+        route = "review_smart_split/{imageUri}",
+        title = "Review Split Bill",
+        iconId = R.drawable.smart_split_40px,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
+    object SelectMember : NavItem(
+        route = "select_member?exclude={exclude}",
+        title = "Select Member",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
+    object SplitResult : NavItem(
+        route = "split_result_screen",
+        title = "Split Result",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
     object GallerySplit : NavItem(
         route = "gallery_split",
         title = "Gallery Split",
@@ -149,6 +173,9 @@ sealed class NavItem (
             GalleryTransaction,
             ManualTransaction,
             ReviewTransaction,
+            ReviewSmartSplit,
+            SelectMember,
+            SplitResult
         )
 
         val FABMenu = listOf(

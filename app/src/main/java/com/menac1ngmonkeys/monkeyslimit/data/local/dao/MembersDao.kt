@@ -29,6 +29,15 @@ interface MembersDao {
     @Query("SELECT * FROM members WHERE id = :id")
     fun getMemberById(id: Int): Flow<Members?>
 
+    // 1. Fetch only Global Contacts (for Selection Screen)
+    @Query("SELECT * FROM members WHERE smartSplitId IS NULL ORDER BY name ASC")
+    fun getAllGlobalContacts(): Flow<List<Members>>
+
+    // 2. Fetch Members belonging to a specific Bill (for History/Result)
+    @Query("SELECT * FROM members WHERE smartSplitId = :splitId")
+    fun getMembersBySplitId(splitId: Int): Flow<List<Members>>
+
+
     @Update
     suspend fun update(members: Members)
 

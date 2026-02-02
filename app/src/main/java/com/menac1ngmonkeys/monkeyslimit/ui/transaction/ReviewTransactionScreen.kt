@@ -54,6 +54,7 @@ fun ReviewTransactionScreen(
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current // <--- Get Context
 
     ReviewTransactionScreenContent(
         budgets = state.budgets,
@@ -62,6 +63,7 @@ fun ReviewTransactionScreen(
         isLoading = state.isLoading,
         onSave = { date, items, type ->
             viewModel.saveTransaction(
+                context = context,
                 date = date,
                 reviewItems = items,
                 type = type,

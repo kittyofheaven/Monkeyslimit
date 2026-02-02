@@ -21,8 +21,8 @@ import androidx.room.PrimaryKey
 )
 data class Members(
     @PrimaryKey(autoGenerate = true) val id: Int,
-    @ColumnInfo(name = "smartSplitId") val smartSplitId: Int,
+    @ColumnInfo(name = "smartSplitId") val smartSplitId: Int? = null,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "contact") val contact: String?,
-    @ColumnInfo(name = "note") val note: String?
+    @ColumnInfo(name = "contact") val contact: String? = null,
+    @ColumnInfo(name = "note") val note: String? = null
 )
