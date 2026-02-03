@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoriesDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(categories: Categories): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(categories: List<Categories>)
 
     // Filter by type (e.g., show only Income categories in dropdown)
@@ -30,6 +30,11 @@ interface CategoriesDao {
 
     @Query("SELECT * FROM categories WHERE id = :id")
     fun getCategoryById(id: Int): Flow<Categories?>
+
+    // --- ADDED THIS METHOD TO FIX DUPLICATES ---
+    @Query("SELECT * FROM categories WHERE name = :name AND type = :type LIMIT 1")
+    suspend fun getCategoryByNameAndType(name: String, type: TransactionType): Categories?
+    // -------------------------------------------
 
     @Query("SELECT COUNT(*) FROM categories")
     suspend fun count(): Int
