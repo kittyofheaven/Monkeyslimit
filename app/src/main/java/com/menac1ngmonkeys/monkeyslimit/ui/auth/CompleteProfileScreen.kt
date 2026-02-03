@@ -51,7 +51,7 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompleteProfileScreen(
-    onComplete: () -> Unit,
+    onComplete: () -> Unit, // (This arg might be redundant if VM handles nav via state, but keeping signature)
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     var mobile by remember { mutableStateOf("") }
@@ -59,17 +59,25 @@ fun CompleteProfileScreen(
     var birthDateText by remember { mutableStateOf("") }
     var birthDateObject by remember { mutableStateOf<Date?>(null) }
     var gender by remember { mutableStateOf("") }
+    var income by remember { mutableStateOf("") }
+    var marriageStatusStr by remember { mutableStateOf("") }
+
     var validationError by remember { mutableStateOf<String?>(null) }
 
     val authUiState by authViewModel.uiState.collectAsState()
 
-    // --- 1. HANDLE SYSTEM BACK PRESS ---
-    // If user presses physical back button, we want to sign them out (Cancel registration)
-    // instead of leaving them logged in with an incomplete profile.
+    // Handle Back Press
     BackHandler {
         authViewModel.signOut()
     }
 
+    // Dropdown States
+    var jobExpanded by remember { mutableStateOf(false) }
+    var genderExpanded by remember { mutableStateOf(false) }
+    var incomeExpanded by remember { mutableStateOf(false) }
+    var marriedExpanded by remember { mutableStateOf(false) }
+
+    // Date Picker
     val datePickerState = rememberDatePickerState(
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= System.currentTimeMillis()
@@ -77,8 +85,6 @@ fun CompleteProfileScreen(
         }
     )
     var showDatePicker by remember { mutableStateOf(false) }
-    var jobExpanded by remember { mutableStateOf(false) }
-    var genderExpanded by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
         AuthDatePickerDialog(datePickerState, { showDatePicker = false }, { obj, text ->
@@ -135,18 +141,11 @@ fun CompleteProfileScreen(
                 ) {
                     Spacer(Modifier.height(40.dp))
                     AuthInputField("Mobile Number", mobile, { mobile = it })
+
                     AuthDropdownField(
                         label = "Job",
                         selectedValue = job,
-                        options = listOf(
-                            "Student",
-                            "Employee",
-                            "Part-time Employee",
-                            "Entrepreneur",
-                            "Freelancer",
-                            "Housewife/househusband",
-                            "Other"
-                        ),
+                        options = listOf("Student", "Employee", "Part-time Employee", "Entrepreneur", "Freelancer", "Housewife/househusband", "Other"),
                         expanded = jobExpanded,
                         onExpandedChange = { jobExpanded = it },
                         onSelect = { job = it }
@@ -156,13 +155,31 @@ fun CompleteProfileScreen(
                         Text("Birth Date", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Box(Modifier.fillMaxWidth()) {
                             AuthInputField("", birthDateText, {}, enabled = false)
-                            Box(Modifier
-                                .matchParentSize()
-                                .clickable { showDatePicker = true })
+                            Box(Modifier.matchParentSize().clickable { showDatePicker = true })
                         }
                     }
 
                     AuthDropdownField("Gender", gender, listOf("Male", "Female"), genderExpanded, { genderExpanded = it }, { gender = it })
+
+                    // NEW: Income
+                    AuthDropdownField(
+                        label = "Monthly Income",
+                        selectedValue = income,
+                        options = incomeOptions, // Reusing list from SignUpScreen file if available, or duplicate list
+                        expanded = incomeExpanded,
+                        onExpandedChange = { incomeExpanded = it },
+                        onSelect = { income = it }
+                    )
+
+                    // NEW: Marriage Status
+                    AuthDropdownField(
+                        label = "Marriage Status",
+                        selectedValue = marriageStatusStr,
+                        options = listOf("Single", "Married"),
+                        expanded = marriedExpanded,
+                        onExpandedChange = { marriedExpanded = it },
+                        onSelect = { marriageStatusStr = it }
+                    )
 
                     Spacer(Modifier.height(20.dp))
 
@@ -174,9 +191,14 @@ fun CompleteProfileScreen(
                                 job.isBlank() -> validationError = "Please select your job"
                                 birthDateObject == null -> validationError = "Please select your birth date"
                                 gender.isBlank() -> validationError = "Please select your gender"
+                                income.isBlank() -> validationError = "Please select your income"
+                                marriageStatusStr.isBlank() -> validationError = "Please select your marriage status"
                                 else -> {
-                                    authViewModel.completeGoogleProfile(mobile, job, birthDateObject, gender)
-                                    // Gatekeeper will handle navigation upon success
+                                    val isMarriedBool = marriageStatusStr == "Married"
+                                    authViewModel.completeGoogleProfile(
+                                        mobile, job, birthDateObject, gender,
+                                        income, isMarriedBool
+                                    )
                                 }
                             }
                         },
@@ -190,8 +212,6 @@ fun CompleteProfileScreen(
                         else Text("Finish Setup", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
 
-                    // --- 2. CANCEL BUTTON ---
-                    // Allows user to abort the Google Sign-Up process
                     TextButton(
                         onClick = { authViewModel.signOut() },
                         enabled = !authUiState.isLoading

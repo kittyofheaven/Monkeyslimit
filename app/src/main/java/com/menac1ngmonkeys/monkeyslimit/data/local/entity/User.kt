@@ -14,6 +14,8 @@ data class User(
     val job: String = "",
     val birthDate: Date = Date(0),
     val gender: String = "",
+    val income: String = "",
+    val isMarried: Boolean = false,
     val photoUrl: String? = null,
     val isSynced: Boolean = true
 )

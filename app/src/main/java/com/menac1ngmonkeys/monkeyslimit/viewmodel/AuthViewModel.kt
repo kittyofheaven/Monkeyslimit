@@ -138,9 +138,10 @@ class AuthViewModel(
         mobile: String,
         job: String,
         birthDate: Date?,
-        gender: String
+        gender: String,
+        income: String,
+        isMarried: Boolean
     ) {
-        // Validation (simplified for brevity, assume validation helpers exist)
         if (birthDate == null) { _uiState.update { it.copy(error = "Birth date required") }; return }
 
         _uiState.update { it.copy(isLoading = true) }
@@ -159,7 +160,8 @@ class AuthViewModel(
                             job = job,
                             birthDate = birthDate,
                             gender = gender,
-                            // Initial state: Not synced until confirmed by Firestore
+                            income = income,
+                            isMarried = isMarried,
                             isSynced = false
                         )
                         saveUserToBoth(user)
@@ -210,6 +212,8 @@ class AuthViewModel(
                                             job = "Not set",
                                             birthDate = Date(0),
                                             gender = "Not set",
+                                            income = "Not set", // Default for draft
+                                            isMarried = false,  // Default for draft
                                             photoUrl = firebaseUser.photoUrl?.toString(),
                                             isSynced = false
                                         )
@@ -231,7 +235,14 @@ class AuthViewModel(
             }
     }
 
-    fun completeGoogleProfile(mobile: String, job: String, birthDate: Date?, gender: String) {
+    fun completeGoogleProfile(
+        mobile: String,
+        job: String,
+        birthDate: Date?,
+        gender: String,
+        income: String,
+        isMarried: Boolean
+    ) {
         val firebaseUser = auth.currentUser ?: return
         if (birthDate == null) { _uiState.update { it.copy(error = "Date required") }; return }
 
@@ -249,10 +260,11 @@ class AuthViewModel(
                     job = job,
                     birthDate = birthDate,
                     gender = gender,
+                    income = income,
+                    isMarried = isMarried,
                     photoUrl = existingUser?.photoUrl ?: firebaseUser.photoUrl?.toString(),
-                    isSynced = false // Will become true after upload
+                    isSynced = false
                 )
-                // NOW we save to both (Making it permanent)
                 saveUserToBoth(updatedUser)
                 _uiState.update { it.copy(isLoading = false, isRegistrationComplete = true) }
             } catch (e: Exception) {

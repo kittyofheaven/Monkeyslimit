@@ -22,7 +22,7 @@ import java.util.Date
         Transactions::class,
         User::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(DateConverter::class, Converters::class)
