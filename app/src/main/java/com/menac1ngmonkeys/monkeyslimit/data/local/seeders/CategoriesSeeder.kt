@@ -6,115 +6,28 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 
 object CategoriesSeeder {
     suspend fun seed(categoriesDao: CategoriesDao) {
-        val existing = categoriesDao.count()
-        if (existing > 0) return
+        // Define all your categories in one list
+        val allCategories = listOf(
+            // --- EXPENSE ---
+            Categories(0, "Food and Beverages", null, "Makanan, minuman, dan dine-in/takeaway.", TransactionType.EXPENSE),
+            Categories(0, "Transport", null, "Transportasi harian: bensin, parkir, tol, ojek/ride-hailing, tiket.", TransactionType.EXPENSE),
+            Categories(0, "Shopping", null, "Belanja kebutuhan, fashion, elektronik, dan perlengkapan rumah.", TransactionType.EXPENSE),
+            Categories(0, "Bills", null, "Tagihan bulanan: listrik, air, internet, pulsa, langganan.", TransactionType.EXPENSE),
+            Categories(0, "Entertainment", null, "Hiburan dan rekreasi: bioskop, game, streaming, hobi.", TransactionType.EXPENSE),
+            Categories(0, "Health", null, "Kesehatan: obat, dokter, asuransi, kebugaran.", TransactionType.EXPENSE),
+            Categories(0, "Education", null, "Pendidikan: kursus, buku, alat tulis, biaya sekolah.", TransactionType.EXPENSE),
+            Categories(0, "Donation", null, "Donasi: donasi perusahaan atau organisasi", TransactionType.EXPENSE),
+            Categories(0, "Other", null, "Lain-lain di luar kategori utama.", TransactionType.EXPENSE),
 
-        // 1. EXPENSE CATEGORIES
-        val expenseCategories = listOf(
-            Categories(
-                id = 0,
-                name = "Food and Beverages",
-                icon = null,
-                description = "Makanan, minuman, dan dine-in/takeaway.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Transport",
-                icon = null,
-                description = "Transportasi harian: bensin, parkir, tol, ojek/ride-hailing, tiket.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Shopping",
-                icon = null,
-                description = "Belanja kebutuhan, fashion, elektronik, dan perlengkapan rumah.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Bills",
-                icon = null,
-                description = "Tagihan bulanan: listrik, air, internet, pulsa, langganan.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Entertainment",
-                icon = null,
-                description = "Hiburan dan rekreasi: bioskop, game, streaming, hobi.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Health",
-                icon = null,
-                description = "Kesehatan: obat, dokter, asuransi, kebugaran.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Education",
-                icon = null,
-                description = "Pendidikan: kursus, buku, alat tulis, biaya sekolah.",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Donation",
-                icon = null,
-                description = "Donasi: donasi perusahaan atau organisasi",
-                type = TransactionType.EXPENSE
-            ),
-            Categories(
-                id = 0,
-                name = "Other",
-                icon = null,
-                description = "Lain-lain di luar kategori utama.",
-                type = TransactionType.EXPENSE
-            )
+            // --- INCOME ---
+            Categories(0, "Salary", null, "Gaji bulanan atau pendapatan utama.", TransactionType.INCOME),
+            Categories(0, "Allowance", null, "Uang saku atau pemberian.", TransactionType.INCOME),
+            Categories(0, "Bonus", null, "Bonus kerja, THR, atau insentif.", TransactionType.INCOME),
+            Categories(0, "Investment", null, "Dividen, keuntungan saham, atau reksa dana.", TransactionType.INCOME),
+            Categories(0, "Petty Cash", null, "Uang temuan atau pendapatan kecil lainnya.", TransactionType.INCOME)
         )
 
-        // 2. INCOME CATEGORIES (New!)
-        val incomeCategories = listOf(
-            Categories(
-                id = 0,
-                name = "Salary",
-                icon = null, // You can add resource IDs or string names here if you have icons
-                description = "Gaji bulanan atau pendapatan utama.",
-                type = TransactionType.INCOME
-            ),
-            Categories(
-                id = 0,
-                name = "Allowance",
-                icon = null,
-                description = "Uang saku atau pemberian.",
-                type = TransactionType.INCOME
-            ),
-            Categories(
-                id = 0,
-                name = "Bonus",
-                icon = null,
-                description = "Bonus kerja, THR, atau insentif.",
-                type = TransactionType.INCOME
-            ),
-            Categories(
-                id = 0,
-                name = "Investment",
-                icon = null,
-                description = "Dividen, keuntungan saham, atau reksa dana.",
-                type = TransactionType.INCOME
-            ),
-            Categories(
-                id = 0,
-                name = "Petty Cash",
-                icon = null,
-                description = "Uang temuan atau pendapatan kecil lainnya.",
-                type = TransactionType.INCOME
-            )
-        )
-
-        categoriesDao.insertAll(expenseCategories + incomeCategories)
+        // Thanks to OnConflictStrategy.IGNORE + Unique Index, duplicates are safely skipped.
+        categoriesDao.insertAll(allCategories)
     }
 }
