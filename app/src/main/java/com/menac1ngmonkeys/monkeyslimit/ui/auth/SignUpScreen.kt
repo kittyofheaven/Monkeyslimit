@@ -12,13 +12,10 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -29,19 +26,31 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
-import java.text.SimpleDateFormat
 import java.util.*
+
+// Helper List for Income
+val incomeOptions = listOf(
+    "< Rp 1.000.000",
+    "Rp 1.000.000 - Rp 3.000.000",
+    "Rp 3.000.000 - Rp 5.000.000",
+    "Rp 5.000.000 - Rp 8.000.000",
+    "Rp 8.000.000 - Rp 12.000.000",
+    "Rp 12.000.000 - Rp 20.000.000",
+    "> Rp 20.000.000"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     onNavigateToLogin: () -> Unit,
-    onEmailSignUp: (String, String, String, String, String, String, Date?, String) -> Unit,
+    // UPDATED SIGNATURE
+    onEmailSignUp: (String, String, String, String, String, String, Date?, String, String, Boolean) -> Unit,
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val authUiState by authViewModel.uiState.collectAsState()
     val isLoading = authUiState.isLoading
 
+    // Form States
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -50,9 +59,18 @@ fun SignUpScreen(
     var birthDateText by remember { mutableStateOf("") }
     var birthDateObject by remember { mutableStateOf<Date?>(null) }
     var gender by remember { mutableStateOf("") }
+    var income by remember { mutableStateOf("") }
+    var marriageStatusStr by remember { mutableStateOf("") } // "Married" or "Single"
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    // Dropdown States
+    var jobExpanded by remember { mutableStateOf(false) }
+    var genderExpanded by remember { mutableStateOf(false) }
+    var incomeExpanded by remember { mutableStateOf(false) }
+    var marriedExpanded by remember { mutableStateOf(false) }
+
+    // Date Picker Logic
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
         selectableDates = object : SelectableDates {
@@ -60,9 +78,6 @@ fun SignUpScreen(
             override fun isSelectableYear(year: Int) = year <= Calendar.getInstance().get(Calendar.YEAR)
         }
     )
-
-    var jobExpanded by remember { mutableStateOf(false) }
-    var genderExpanded by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
         AuthDatePickerDialog(
@@ -117,15 +132,7 @@ fun SignUpScreen(
                     AuthDropdownField(
                         label = "Job",
                         selectedValue = job,
-                        options = listOf(
-                            "Student",
-                            "Employee",
-                            "Part-time Employee",
-                            "Entrepreneur",
-                            "Freelancer",
-                            "Housewife/househusband",
-                            "Other"
-                        ),
+                        options = listOf("Student", "Employee", "Part-time Employee", "Entrepreneur", "Freelancer", "Housewife/househusband", "Other"),
                         expanded = jobExpanded,
                         onExpandedChange = { jobExpanded = it },
                         onSelect = { job = it }
@@ -141,6 +148,26 @@ fun SignUpScreen(
                     }
 
                     AuthDropdownField("Gender", gender, listOf("Male", "Female"), genderExpanded, { genderExpanded = it }, { gender = it })
+
+                    // NEW: Income Dropdown
+                    AuthDropdownField(
+                        label = "Monthly Income",
+                        selectedValue = income,
+                        options = incomeOptions,
+                        expanded = incomeExpanded,
+                        onExpandedChange = { incomeExpanded = it },
+                        onSelect = { income = it }
+                    )
+
+                    // NEW: Marriage Status Dropdown
+                    AuthDropdownField(
+                        label = "Marriage Status",
+                        selectedValue = marriageStatusStr,
+                        options = listOf("Single", "Married"),
+                        expanded = marriedExpanded,
+                        onExpandedChange = { marriedExpanded = it },
+                        onSelect = { marriageStatusStr = it }
+                    )
 
                     AuthInputField(
                         label = "Password",
@@ -161,7 +188,14 @@ fun SignUpScreen(
                     Spacer(Modifier.height(24.dp))
 
                     Button(
-                        onClick = { onEmailSignUp(email, password, firstName, lastName, mobile, job, birthDateObject, gender) },
+                        onClick = {
+                            val isMarriedBool = marriageStatusStr == "Married"
+                            onEmailSignUp(
+                                email, password, firstName, lastName,
+                                mobile, job, birthDateObject, gender,
+                                income, isMarriedBool
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AuthPrimaryYellow),
                         enabled = !isLoading
@@ -180,7 +214,6 @@ fun SignUpScreen(
                 }
             }
         }
-        // Logo
         Image(
             painter = painterResource(R.drawable.logo_monkeys_limit),
             contentDescription = null,
@@ -193,36 +226,11 @@ fun SignUpScreen(
     }
 }
 
-@Composable
-fun signUpTextFieldColors(cardBg: Color, primaryGreen: Color) = OutlinedTextFieldDefaults.colors(
-    unfocusedContainerColor = cardBg,
-    focusedContainerColor = cardBg,
-    unfocusedBorderColor = Color.Transparent,
-    focusedBorderColor = primaryGreen,
-    focusedTextColor = Color.Black,
-    unfocusedTextColor = Color.Black
-)
-
-@Composable
-fun CustomSignUpField(label: String, value: String, onValueChange: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Spacer(Modifier.height(4.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(25.dp),
-            colors = signUpTextFieldColors(Color(0xFFF9F9F9), Color(0xFF6C8B08))
-        )
-    }
-}
-
 @Preview
 @Composable
 private fun SignUpScreenPreview() {
     SignUpScreen(
         onNavigateToLogin = {},
-        onEmailSignUp = { _, _, _, _, _, _, _, _ -> }
+        onEmailSignUp = { _, _, _, _, _, _, _, _, _, _ -> }
     )
 }

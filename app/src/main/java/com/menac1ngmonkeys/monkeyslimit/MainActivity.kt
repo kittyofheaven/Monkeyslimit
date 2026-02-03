@@ -186,10 +186,13 @@ fun AuthGatekeeper(
                 onNavigateToSignUp = { isLoginScreen = false }
             )
         } else {
+            // FIX: Added income and isMarried to the callback parameters
             SignUpScreen(
                 onNavigateToLogin = { isLoginScreen = true },
-                onEmailSignUp = { email, pass, fName, lName, phone, job, bDay, gender ->
-                    authViewModel.signUpWithEmail(email, pass, fName, lName, phone, job, bDay, gender)
+                onEmailSignUp = { email, pass, fName, lName, phone, job, bDay, gender, income, isMarried ->
+                    authViewModel.signUpWithEmail(
+                        email, pass, fName, lName, phone, job, bDay, gender, income, isMarried
+                    )
                 }
             )
         }
