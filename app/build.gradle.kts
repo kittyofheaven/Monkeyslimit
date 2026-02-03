@@ -106,7 +106,10 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.foundation)            // Room runtime
+    implementation(libs.androidx.foundation)
+    implementation(libs.foundation)
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.ui)            // Room runtime
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 
