@@ -6,7 +6,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -45,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ScanTransactionViewModel
 import java.io.File
@@ -53,19 +53,27 @@ import java.io.File
 @Composable
 fun ScanTransactionScreen(
     onNavigateToManual: () -> Unit,
-    onImagePicked: (Uri) -> Unit = {},
+    // UPDATED: Now accepts the OCR text string
+    onImagePicked: (Uri, String?) -> Unit,
     viewModel: ScanTransactionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
 
+    // --- Process Image Handler ---
+    val processImage = { uri: Uri ->
+        viewModel.analyzeReceipt(context, uri) { recognizedText ->
+            // Pass BOTH the URI and the Text to the next screen
+            onImagePicked(uri, recognizedText)
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            Log.d("ScanScreen", "Image picked from gallery: $uri")
-            onImagePicked(uri)
+            processImage(uri)
         }
     }
 
@@ -75,18 +83,50 @@ fun ScanTransactionScreen(
         }
     }
 
+    // --- Error Dialog ---
+    if (uiState.error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            title = { Text("Scan Failed") },
+            text = { Text(uiState.error!!) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("OK", color = AuthPrimaryGreen)
+                }
+            },
+            containerColor = Color.White
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black,
         shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
     ) {
         if (permissionState.status.isGranted) {
-            ScanContent(
-                isFlashOn = uiState.isFlashOn,
-                onToggleFlash = { viewModel.toggleFlash() },
-                onOpenGallery = { galleryLauncher.launch("image/*") },
-                onPhotoCaptured = { uri -> onImagePicked(uri) }
-            )
+            Box(Modifier.fillMaxSize()) {
+                ScanContent(
+                    isFlashOn = uiState.isFlashOn,
+                    onToggleFlash = { viewModel.toggleFlash() },
+                    onOpenGallery = { galleryLauncher.launch("image/*") },
+                    onPhotoCaptured = { uri -> processImage(uri) }
+                )
+
+                if (uiState.isProcessing) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = AuthPrimaryGreen)
+                            Spacer(Modifier.height(16.dp))
+                            Text("Analyzing Receipt...", color = Color.White)
+                        }
+                    }
+                }
+            }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Camera permission required to scan receipts.", color = Color.White)
@@ -122,7 +162,6 @@ private fun ScanContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-
         AndroidView(
             factory = { ctx ->
                 PreviewView(ctx).apply {
@@ -138,6 +177,7 @@ private fun ScanContent(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Flash Button
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,6 +194,7 @@ private fun ScanContent(
             }
         }
 
+        // Guide Overlay (Corners)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -173,12 +214,14 @@ private fun ScanContent(
             }
         }
 
+        // Bottom Controls
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(bottom = 50.dp, start = 20.dp, end = 20.dp)
         ) {
+            // Shutter Button
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -192,6 +235,7 @@ private fun ScanContent(
                     }
             )
 
+            // Gallery Button
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -228,42 +272,23 @@ fun YellowCircleButton(
     }
 }
 
-/**
- * Captures photo to the app's CACHE directory using [FileProvider].
- * This ensures the photo is temporary and doesn't clutter the user's Gallery.
- */
 private fun takePhotoToCache(
     context: Context,
     cameraController: LifecycleCameraController,
     onPhotoCaptured: (Uri) -> Unit
 ) {
-    // 1. Create a temporary file in the app's CACHE directory
-    val photoFile = File.createTempFile(
-        "temp_scan_",
-        ".jpg",
-        context.cacheDir
-    )
-
-    // 2. Create OutputOptions pointing to this file
+    val photoFile = File.createTempFile("temp_scan_", ".jpg", context.cacheDir)
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
-    // 3. Take Picture
     cameraController.takePicture(
         outputOptions,
         ContextCompat.getMainExecutor(context),
         object : ImageCapture.OnImageSavedCallback {
             override fun onError(exc: ImageCaptureException) {
                 Log.e("ScanScreen", "Photo capture failed: ${exc.message}", exc)
-                Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
             }
-
             override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                // 4. Get the URI using FileProvider
-                val savedUri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider", // Authority from AndroidManifest
-                    photoFile
-                )
+                val savedUri = FileProvider.getUriForFile(context, "${context.packageName}.provider", photoFile)
                 onPhotoCaptured(savedUri)
             }
         }
