@@ -172,13 +172,18 @@ fun NavGraph(
                 onNavigateToManual = {
                     navController.navigate(NavItem.ManualTransaction.route)
                 },
-                onImagePicked = { uri ->
-                    // 1. Encode the URI so it is safe to pass in the URL
+                // Updated to accept (Uri, String?)
+                onImagePicked = { uri, ocrText ->
+                    // 1. Encode the URI
                     val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
 
-                    // 2. Navigate to Review Screen
-                    // We construct the route: "review_transaction/content%3A%2F%2Fmedia..."
-                    val route = NavItem.ReviewTransaction.route.replace("{imageUri}", encodedUri)
+                    // 2. Encode the OCR Text (handle nulls safely)
+                    val encodedOcrText = URLEncoder.encode(ocrText ?: "", StandardCharsets.UTF_8.toString())
+
+                    // 3. Construct the route with the query parameter
+                    // We manually construct the string to match the Review route format
+                    val route = "review_transaction/$encodedUri?ocrText=$encodedOcrText"
+
                     navController.navigate(route)
                 }
             )
@@ -189,19 +194,28 @@ fun NavGraph(
             )
         }
         composable(
-            route = NavItem.ReviewTransaction.route,
-            arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
+            route = NavItem.ReviewTransaction.route, // This now includes "?ocrText={ocrText}"
+            arguments = listOf(
+                navArgument("imageUri") { type = NavType.StringType },
+                navArgument("ocrText") { type = NavType.StringType; nullable = true }
+            )
         ) { backStackEntry ->
             val imageUriString = backStackEntry.arguments?.getString("imageUri")
+            val ocrText = backStackEntry.arguments?.getString("ocrText")
 
             // Create ViewModel
             val viewModel: ReviewTransactionViewModel = viewModel(
                 factory = AppViewModelProvider.Factory
             )
 
-            // PASS THE URI TO VIEWMODEL IMMEDIATELY
+            // Initialize Data ONLY ONCE
             LaunchedEffect(imageUriString) {
                 viewModel.setImageUri(imageUriString)
+
+                // If OCR text was passed, try to extract Date and Amount
+                if (!ocrText.isNullOrEmpty()) {
+                    viewModel.parseReceiptText(ocrText)
+                }
             }
 
             ReviewTransactionScreen(

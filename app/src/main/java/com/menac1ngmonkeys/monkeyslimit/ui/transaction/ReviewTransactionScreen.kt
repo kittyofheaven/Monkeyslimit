@@ -54,12 +54,15 @@ fun ReviewTransactionScreen(
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current // <--- Get Context
+    val context = LocalContext.current
 
     ReviewTransactionScreenContent(
         budgets = state.budgets,
         categories = state.categories,
         imageUri = state.imageUri,
+        // PERBAIKAN 1: Oper data hasil scan ke konten UI
+        detectedDate = state.detectedDate,
+        detectedItems = state.detectedItems,
         isLoading = state.isLoading,
         onSave = { date, items, type ->
             viewModel.saveTransaction(
@@ -79,41 +82,70 @@ fun ReviewTransactionScreenContent(
     budgets: List<Budgets>,
     categories: List<Categories>,
     imageUri: String?,
+    // PERBAIKAN 2: Tambahkan parameter penerima
+    detectedDate: Date? = null,
+    detectedItems: List<ReviewItemUi> = emptyList(),
     isLoading: Boolean,
     onSave: (Date, List<ReviewItemUi>, TransactionType) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
-    var transactionDate by remember { mutableStateOf(Date()) }
+    // Inisialisasi awal. Jika detectedDate sudah ada (sangat cepat), pakai itu. Jika tidak, pakai Date()
+    var transactionDate by remember { mutableStateOf(detectedDate ?: Date()) }
 
-    // --- Transaction Type State ---
     var transactionType by remember { mutableStateOf(TransactionType.EXPENSE) }
 
-    // --- Filter Categories based on Type ---
     val filteredCategories = remember(categories, transactionType) {
         categories.filter { it.type == transactionType }
     }
 
-    // States for Editing/Adding
     var itemToEdit by remember { mutableStateOf<ReviewItemUi?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
-
     var isImageExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     var globalSelectedBudget by remember(budgets) { mutableStateOf(budgets.firstOrNull()) }
 
+    // PERBAIKAN 3: Inisialisasi items dengan logika cerdas
+    // Jika detectedItems ada isinya, gunakan itu. Jika kosong, buat dummy default.
     var items by remember(categories, budgets) {
         mutableStateOf(
             if (categories.isNotEmpty() && budgets.isNotEmpty()) {
                 val defaultCatId = categories.first().id
                 val defaultBudgetId = budgets.first().id
-                listOf(
-                    ReviewItemUi(1, "Fish n Chips", defaultCatId, defaultBudgetId, 1, 55000.0),
-                    ReviewItemUi(2, "Ice Tea", defaultCatId, defaultBudgetId, 1, 15000.0)
-                )
+
+                // Gunakan default items hanya jika detectedItems kosong
+                if (detectedItems.isEmpty()) {
+                    listOf(
+                        ReviewItemUi(1, "Fish n Chips", defaultCatId, defaultBudgetId, 1, 55000.0),
+                        ReviewItemUi(2, "Ice Tea", defaultCatId, defaultBudgetId, 1, 15000.0)
+                    )
+                } else {
+                    // Mapping detected items ke ID default agar tidak error (ID 0 dari VM diganti ID valid)
+                    detectedItems.map { it.copy(categoryId = defaultCatId, budgetId = defaultBudgetId) }
+                }
             } else emptyList()
         )
+    }
+
+    // PERBAIKAN 4: LaunchedEffect untuk Auto-Update TANGGAL
+    // Ini kuncinya! Ketika OCR selesai memproses di background, detectedDate berubah.
+    // Kode ini akan memaksa UI mengupdate transactionDate.
+    LaunchedEffect(detectedDate) {
+        if (detectedDate != null) {
+            transactionDate = detectedDate
+        }
+    }
+
+    // PERBAIKAN 5: LaunchedEffect untuk Auto-Update ITEMS (Total Harga)
+    LaunchedEffect(detectedItems) {
+        if (detectedItems.isNotEmpty() && categories.isNotEmpty() && budgets.isNotEmpty()) {
+            val defaultCatId = categories.first().id
+            val defaultBudgetId = budgets.first().id
+            items = detectedItems.map {
+                it.copy(categoryId = defaultCatId, budgetId = defaultBudgetId)
+            }
+        }
     }
 
     val subtotal = items.sumOf { it.pricePerUnit * it.quantity }
@@ -213,7 +245,6 @@ fun ReviewTransactionScreenContent(
                     selectedType = transactionType,
                     onTypeSelected = { newType ->
                         transactionType = newType
-                        // Logic: Automatically reset all items to the first category of the new type
                         val defaultCategory = categories.firstOrNull { it.type == newType }
                         if (defaultCategory != null) {
                             items = items.map { it.copy(categoryId = defaultCategory.id) }
@@ -254,7 +285,7 @@ fun ReviewTransactionScreenContent(
                         item = item,
                         currentCategory = currentCategory,
                         currentBudget = currentBudget,
-                        allCategories = filteredCategories, // PASS FILTERED CATEGORIES
+                        allCategories = filteredCategories,
                         allBudgets = budgets,
                         showBudget = transactionType == TransactionType.EXPENSE,
                         onEdit = { itemToEdit = item },
@@ -649,6 +680,14 @@ fun PreviewReviewScreen() {
     MonkeyslimitTheme {
         val dummyCategories = listOf(Categories(1, "Food", null, null))
         val dummyBudgets = listOf(Budgets(1, "Weekly", 0.0, 1000.0, Date(), null, null))
-        ReviewTransactionScreenContent(dummyBudgets, dummyCategories, null, false, { _, _, _ -> })
+        ReviewTransactionScreenContent(
+            budgets = dummyBudgets,
+            categories = dummyCategories,
+            imageUri = null,
+            detectedDate = null, // <--- Add null
+            detectedItems = emptyList(), // <--- Add emptyList
+            isLoading = false,
+            onSave = { _, _, _ -> }
+        )
     }
 }

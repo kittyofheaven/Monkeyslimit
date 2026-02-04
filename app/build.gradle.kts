@@ -94,6 +94,9 @@ dependencies {
 
     implementation(libs.guava)
 
+    // ---------------- ML Kit ----------------
+    implementation(libs.play.services.mlkit.text.recognition)
+
     // ---------------- Permissions ----------------
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.accompanist.permissions)

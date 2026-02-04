@@ -146,12 +146,12 @@ sealed class NavItem (
     )
 
     object ReviewTransaction : NavItem(
-        // The "{imageUri}" part acts as a variable we can read later
-        route = "review_transaction/{imageUri}",
+        // UPDATE THIS LINE:
+        route = "review_transaction/{imageUri}?ocrText={ocrText}",
         title = "Review Transaction",
-        iconId = 0, // No icon needed, it's not on the bottom bar
+        iconId = 0,
         showBottomBar = false,
-        showTopBar = true // Up to you
+        showTopBar = true
     )
 
     companion object {

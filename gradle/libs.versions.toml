@@ -1,5 +1,5 @@
 [versions]
-agp = "9.0.0"
+agp = "8.13.0"
 kotlin = "2.2.21"
 ksp = "2.3.3"
 coreKtx = "1.10.1"
@@ -11,6 +11,7 @@ activityCompose = "1.8.0"
 composeBom = "2024.09.00"
 material = "1.12.0"
 navigationCompose = "2.9.5"
+playServicesMlkitTextRecognition = "19.0.1"
 roomRuntime = "2.8.3"
 material3 = "1.4.0"
 materialIcons = "1.6.8"
@@ -64,6 +65,7 @@ androidx-compose-testing = { group = "androidx.xr.compose", name = "compose-test
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "materialIcons" }
+play-services-mlkit-text-recognition = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version.ref = "playServicesMlkitTextRecognition" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtimeVersion" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
