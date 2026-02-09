@@ -48,8 +48,8 @@ fun Double.toRupiahFormat(): String {
         format.roundingMode = RoundingMode.DOWN // <-- THE KEY CHANGE
     } else {
         // For smaller numbers, keep two decimals and use standard rounding
-        format.maximumFractionDigits = 2
-        format.minimumFractionDigits = 2
+        format.maximumFractionDigits = 0
+        format.minimumFractionDigits = 0
         // It's good practice to set this explicitly too for consistency
         format.roundingMode = RoundingMode.HALF_UP
     }

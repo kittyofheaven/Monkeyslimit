@@ -2,12 +2,7 @@ package com.menac1ngmonkeys.monkeyslimit.ui.analytics
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,19 +11,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.menac1ngmonkeys.monkeyslimit.ui.components.RefreshIconButton
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 
 /**
- * A container card for displaying analytics charts and controls.
- *
- * It includes a title, action icons for search and date selection, and a placeholder
- * area where a chart can be drawn.
- *
- * @param modifier The modifier to be applied to the container.
- * @param onRefreshClick A callback function for when the search icon is clicked.
- * @param onDateRangeClick A callback function for when the date range icon is clicked.
- * @param content The composable content to be placed inside the main area, typically a chart.
+ * A container card for displaying analytics charts.
+ * Aligns with the white card style in the design.
  */
 @Composable
 fun AnalyticsBox(
@@ -38,47 +25,35 @@ fun AnalyticsBox(
     filterLabel: String? = null,
     content: @Composable () -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10))
-            .background(MaterialTheme.colorScheme.background)
-            .padding(
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp
-            ),
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // Header Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(20.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.SpaceAround
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Income & Expenses",
+                    text = "Income & Expense Trend", // Or "Monthly Expense Trend"
                     style = MaterialTheme.typography.titleMedium,
-    //                fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                ChartFilter(
-                    filterLabel = filterLabel,
-                )
-            }
-            Row {
-                RefreshIconButton(onClick = onRefreshClick)
 
-                IconButton(onClick = onDateRangeClick) {
-                    Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Date Range")
-                }
+                // Optional: You can put specific chart actions here if needed
+                // For now keeping it simple as per the clean design image
             }
+
+            // Chart Content Area
+            content()
         }
-
-        // Chart Content Area
-        content()
     }
 }
 
@@ -87,7 +62,6 @@ fun AnalyticsBox(
 private fun AnalyticsBoxPreview() {
     MonkeyslimitTheme(darkTheme = true) {
         AnalyticsBox {
-            // This is how you would place a chart inside
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -98,26 +72,5 @@ private fun AnalyticsBoxPreview() {
                 Text("Chart will go here", style = MaterialTheme.typography.bodySmall)
             }
         }
-    }
-}
-
-@Composable
-private fun ChartFilter(
-    filterLabel: String?,
-    modifier: Modifier = Modifier,
-) {
-    // Reserve a constant height so the overall component doesn't shrink
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (filterLabel != null) {
-            Text(
-                text = filterLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // if null -> nothing is drawn, but the Box still takes the same vertical space
     }
 }

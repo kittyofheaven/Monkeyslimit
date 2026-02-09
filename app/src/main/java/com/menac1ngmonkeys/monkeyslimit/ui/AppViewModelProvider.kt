@@ -54,7 +54,8 @@ object AppViewModelProvider {
         // Initializer for AnalyticsViewModel
         initializer {
             AnalyticsViewModel(
-                transactionsRepository = monkeysLimitApplication().container.transactionsRepository
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
+                categoriesRepository = monkeysLimitApplication().container.categoriesRepository
             )
         }
         // Initializer for BudgetViewModel
