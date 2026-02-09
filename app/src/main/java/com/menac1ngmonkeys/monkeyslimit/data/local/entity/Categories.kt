@@ -13,7 +13,7 @@ import androidx.room.Index
 data class Categories(
     @PrimaryKey(autoGenerate = true) val id: Int,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "icon") val icon: String?,
+    @ColumnInfo(name = "icon") val icon: Int?,
     @ColumnInfo(name = "description") val description: String?,
     @ColumnInfo(name = "type") val type: TransactionType = TransactionType.EXPENSE,
 )

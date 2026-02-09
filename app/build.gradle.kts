@@ -97,6 +97,11 @@ dependencies {
     // ---------------- ML Kit ----------------
     implementation(libs.play.services.mlkit.text.recognition)
 
+    // Retrofit & OkHttp
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
     // ---------------- Permissions ----------------
     implementation(libs.androidx.concurrent.futures.ktx)
     implementation(libs.accompanist.permissions)
@@ -105,14 +110,15 @@ dependencies {
     implementation(libs.androidx.navigation.compose)      // Navigation for Compose
 
     // ---------------- Data / Persistence (Room) ----------------
-    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.runtime)            // Room runtime
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.foundation)
     implementation(libs.foundation)
     implementation(libs.androidx.compose.runtime)
-    implementation(libs.androidx.ui)            // Room runtime
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.compose.ui.text)
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 

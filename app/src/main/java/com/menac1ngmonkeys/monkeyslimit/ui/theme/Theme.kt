@@ -40,7 +40,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = LightBlack, // Text on cards
 
     // 7. INVERSE (For the Bottom Navigation Bar which is dark)
-    inverseSurface = LightBlack,
+    inverseSurface = DrabDarkBrown,
     inverseOnSurface = LightWhite,
     inversePrimary = Avocado, // Primary color when on top of dark surface
 

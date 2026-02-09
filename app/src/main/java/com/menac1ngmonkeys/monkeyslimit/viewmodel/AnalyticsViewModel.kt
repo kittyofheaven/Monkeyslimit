@@ -1,10 +1,15 @@
 package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
+import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AnalyticsUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.state.CategoryExpense
 import com.menac1ngmonkeys.monkeyslimit.ui.state.Timeframe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,90 +19,75 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.YearMonth
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import java.util.Date
 import java.util.Locale
-
-/**
- * Represents a single aggregated data point for the analytics line chart.
- *
- * Each [ChartPoint] corresponds to one position on the chart’s x-axis and contains:
- *
- * - **label** — The formatted x-axis label representing a time bucket.
- *   This label changes depending on the selected [Timeframe]:
- *     - DAILY: `"18 Nov"`
- *     - WEEKLY: `"1–7 Jan"`
- *     - MONTHLY: `"Jan 2025"`
- *     - YEARLY: `"2025"`
- *
- * - **income** — The total income value for this bucket.
- *   (Currently uses placeholder values until real income transactions are implemented.)
- *
- * - **expense** — The total expense value for this bucket.
- *
- * This class is used internally by the ViewModel to transform raw transactions into
- * chart-ready series values (income/expense) and matching x-axis labels.
- *
- * Aggregation and label formatting are handled in [aggregateForTimeframe].
- *
- * @property label The display-ready x-axis label for this aggregated period.
- * @property income The total income amount for the given time bucket.
- * @property expense The total expense amount for the given time bucket.
- */
+import kotlin.math.ceil
 
 private data class ChartPoint(
-    val label: String,   // x-axis label (day / week range / month / year)
+    val label: String,
     val income: Double,
     val expense: Double,
+    val date: LocalDateTime
 )
 
-/**
- * Builds analytics screen state based on selected timeframe and optional date range filters.
- *
- * Aggregates transactions into chart points and surfaces totals, series values, and labels.
- *
- * @param transactionsRepository source of transaction data.
- * @property analyticsUiState live analytics state for UI consumption.
- */
 class AnalyticsViewModel(
     private val transactionsRepository: TransactionsRepository,
+    private val categoriesRepository: CategoriesRepository
 ) : ViewModel() {
-    // Internal mutable state for the selected timeframe.
+
     private val _selectedTimeframe = MutableStateFlow(Timeframe.MONTHLY)
+    private val _currentDate = MutableStateFlow(LocalDate.now())
 
-    private val _customRange =
-        MutableStateFlow<Pair<LocalDate?, LocalDate?>>(null to null)
-
-    /**
-     * Sets a custom inclusive date range filter.
-     * @param start nullable start date; if null, lower bound is open.
-     * @param end nullable end date; if null, upper bound is open.
-     */
-    fun setCustomRange(start: LocalDate?, end: LocalDate?) {
-        _customRange.value = start to end
-    }
-
-    // Public state for the entire screen. It combines data from the repository
-    // with the selected timeframe to produce the final UI state.
     val analyticsUiState: StateFlow<AnalyticsUiState> =
         combine(
             _selectedTimeframe,
-            _customRange,
+            _currentDate,
             transactionsRepository.getAllTransactions(),
-        ) { timeframe, (startDate, endDate), transactions ->
-//            val chartPoints = aggregateForTimeframe(transactions, timeframe)
-            val filtered = filterTransactionsByRange(transactions, startDate, endDate)
-            val chartPoints = aggregateForTimeframe(filtered, timeframe)
+            categoriesRepository.getAllCategories()
+        ) { timeframe, currentDate, transactions, categories ->
 
-            val totalIncome = chartPoints.sumOf { it.income }
-            val totalExpense = chartPoints.sumOf { it.expense }
+            val categoryMap = categories.associateBy { it.id }
+
+            val (startDate, endDate) = calculateDateRange(timeframe, currentDate)
+            val filteredTransactions = filterTransactionsByRange(transactions, startDate, endDate)
+            val chartPoints = aggregateForTimeframe(filteredTransactions, timeframe, startDate, endDate)
+
+            val totalIncome = filteredTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.totalAmount }
+            val totalExpense = filteredTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.totalAmount }
+
+            // --- NEW: Separate Lists ---
+            val incomeTransactions = filteredTransactions
+                .filter { it.type == TransactionType.INCOME }
+                .sortedByDescending { it.date }
+
+            val expenseTransactions = filteredTransactions
+                .filter { it.type == TransactionType.EXPENSE }
+                .sortedByDescending { it.date }
+
+            // "Use data before [current period] to accumulate"
+            val accumulatedSavings = transactions
+                .filter {
+                    // Filter all transactions that happened BEFORE or ON the rangeEndDate
+                    val txDate = it.date.toLocalDate()
+                    !txDate.isAfter(endDate)
+                }
+                .sumOf {
+                    if (it.type == TransactionType.INCOME) it.totalAmount else -it.totalAmount
+                }
+
+            val topExpenses = expenseTransactions.sortedByDescending { it.totalAmount }.take(5)
+
+            val categoryExpenses = calculateCategoryExpenses(expenseTransactions, totalExpense, categoryMap)
 
             AnalyticsUiState(
                 selectedTimeframe = timeframe,
+                currentDate = currentDate,
                 totalIncome = totalIncome,
                 totalExpense = totalExpense,
                 incomeValues = chartPoints.map { it.income },
@@ -105,6 +95,12 @@ class AnalyticsViewModel(
                 dateLabels = chartPoints.map { it.label },
                 rangeStart = startDate,
                 rangeEnd = endDate,
+                topExpenses = topExpenses,
+                incomeTransactions = incomeTransactions,
+                expenseTransactions = expenseTransactions,
+                totalAccumulatedSavings = accumulatedSavings,
+                categoryMap = categoryMap,
+                categoryExpenses = categoryExpenses
             )
         }.stateIn(
             scope = viewModelScope,
@@ -112,202 +108,170 @@ class AnalyticsViewModel(
             initialValue = AnalyticsUiState()
         )
 
-    /**
-     * Updates the selected timeframe bucket size for aggregation to the analytics screen.
-     * @param timeframe aggregation granularity.
-     */
-    fun selectTimeframe(timeframe: Timeframe) {
-        _selectedTimeframe.update { timeframe }
+    private fun calculateCategoryExpenses(
+        transactions: List<Transactions>,
+        totalExpense: Double,
+        categoryMap: Map<Int, Categories>
+    ): List<CategoryExpense> {
+        if (totalExpense == 0.0) return emptyList()
+
+        val chartColors = listOf(
+            Color(0xFF81C784), Color(0xFFFFF176), Color(0xFFFF8A65),
+            Color(0xFFBA68C8), Color(0xFF64B5F6), Color(0xFFE57373)
+        )
+
+        return transactions
+            .groupBy { it.categoryId }
+            .entries.toList()
+            .mapIndexed { index, entry ->
+                val catId = entry.key
+                val txs = entry.value
+                val sum = txs.sumOf { it.totalAmount }
+                val percentage = ((sum / totalExpense) * 100).toFloat()
+
+                val name = categoryMap[catId]?.name ?: "Unknown"
+
+                CategoryExpense(
+                    categoryName = name,
+                    amount = sum,
+                    percentage = percentage,
+                    color = chartColors[index % chartColors.size]
+                )
+            }
+            .sortedByDescending { it.percentage }
     }
 
-    // ----------------- Helpers -----------------
+    fun selectTimeframe(timeframe: Timeframe) {
+        _selectedTimeframe.update { timeframe }
+        _currentDate.update { LocalDate.now() }
+    }
 
-    /**
-     * Aggregates raw transaction data into chart-ready buckets based on a selected [Timeframe].
-     *
-     * This function performs **time-based grouping** and **value accumulation** to produce
-     * a list of [ChartPoint] objects, which contain:
-     *  - A formatted x-axis label (`label`)
-     *  - The total income for that bucket (`income`)
-     *  - The total expense for that bucket (`expense`)
-     *
-     * ## Timeframe Behavior
-     *
-     * ### **DAILY**
-     * - Groups transactions by exact calendar day (`LocalDate`).
-     * - Each result represents one day.
-     * - Label format: `"18 Nov"`, `"21 Nov"`, etc.
-     *
-     * ### **WEEKLY**
-     * - Groups by week ranges.
-     * - A “week” begins on **Monday** (ISO-8601 standard).
-     * - For each week, the bucket key = Monday of that week.
-     * - Label format: `"1–7 Jan"`, `"8–14 Jan"`, etc.
-     *
-     * ### **MONTHLY**
-     * - Groups by `YearMonth` (e.g., January 2025).
-     * - Each bucket contains all transactions within that month.
-     * - Label format: `"Jan 2025"`, `"Feb 2025"`.
-     *
-     * ### **YEARLY**
-     * - Groups all transactions by year (e.g., 2024, 2025).
-     * - Label format: `"2025"`.
-     *
-     * ## Returned Data
-     * The resulting list is **sorted chronologically** (ascending) to ensure the chart
-     * receives properly ordered x-axis points, even if the database stores items unordered.
-     *
-     * ## Notes
-     * - If the transaction list is empty, the function returns an empty list.
-     * - Income values currently use a placeholder (`expense * 1.3`) until real income
-     *   transactions are available in the database.
-     *
-     * @param transactions A list of raw transaction entities to aggregate.
-     * @param timeframe The selected [Timeframe] that determines the aggregation granularity.
-     * @return A chronologically sorted list of [ChartPoint] entries ready to be mapped
-     *         into the chart’s series values and x-axis labels.
-     */
+    fun incrementDate() { moveDate(1) }
+    fun decrementDate() { moveDate(-1) }
+
+    fun setCustomRange(start: LocalDate?, end: LocalDate?) {
+        if (start != null) {
+            _currentDate.update { start }
+        }
+    }
+
+    private fun moveDate(amount: Long) {
+        val timeframe = _selectedTimeframe.value
+        _currentDate.update { date ->
+            when (timeframe) {
+                Timeframe.DAILY -> date.plusDays(amount)
+                Timeframe.WEEKLY -> date.plusWeeks(amount)
+                Timeframe.MONTHLY -> date.plusMonths(amount)
+                Timeframe.YEARLY -> date.plusYears(amount)
+            }
+        }
+    }
+
+    private fun calculateDateRange(timeframe: Timeframe, date: LocalDate): Pair<LocalDate, LocalDate> {
+        return when (timeframe) {
+            Timeframe.DAILY -> date to date
+            Timeframe.WEEKLY -> {
+                val start = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                val end = date.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+                start to end
+            }
+            Timeframe.MONTHLY -> {
+                val start = date.withDayOfMonth(1)
+                val end = date.with(TemporalAdjusters.lastDayOfMonth())
+                start to end
+            }
+            Timeframe.YEARLY -> {
+                val start = date.withDayOfYear(1)
+                val end = date.with(TemporalAdjusters.lastDayOfYear())
+                start to end
+            }
+        }
+    }
+
+    private fun filterTransactionsByRange(
+        transactions: List<Transactions>,
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): List<Transactions> {
+        return transactions.filter { tx ->
+            val d = tx.date.toLocalDate()
+            !d.isBefore(startDate) && !d.isAfter(endDate)
+        }
+    }
 
     private fun aggregateForTimeframe(
         transactions: List<Transactions>,
         timeframe: Timeframe,
+        startDate: LocalDate,
+        endDate: LocalDate
     ): List<ChartPoint> {
         if (transactions.isEmpty()) return emptyList()
 
-        val locale = Locale.getDefault()
+        val lastTxDate = transactions.maxOf { it.date.toLocalDateTime() }
+        val startDateTime = startDate.atStartOfDay()
+        val endDateTime = endDate.atTime(LocalTime.MAX)
+        val effectiveEndDateTime = if (lastTxDate.isBefore(endDateTime)) lastTxDate else endDateTime
+
         return when (timeframe) {
-            Timeframe.DAILY -> {
-                // one point per calendar day
-                val formatter = DateTimeFormatter.ofPattern("dd MMM", locale)
-
-                transactions
-                    .groupBy { it.date.toLocalDate() }
-                    .toSortedMap()
-                    .map { (date, txs) ->
-                        val expense = txs.sumOf { it.totalAmount }
-                        val income = expense * 1.3   // TODO: replace with real income logic
-                        ChartPoint(
-                            label = date.format(formatter),
-                            income = income,
-                            expense = expense,
-                        )
-                    }
-            }
-
-            Timeframe.WEEKLY -> {
-                // one point per week, keyed by Monday of that week
-                transactions
-                    .groupBy {
-                        val d = it.date.toLocalDate()
-                        d.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                    }
-                    .toSortedMap()
-                    .map { (startOfWeek, txs) ->
-                        val expense = txs.sumOf { it.totalAmount }
-                        val income = expense * 1.3
-
-                        val endOfWeek = startOfWeek.plusDays(6)
-                        val startMonthName = startOfWeek.month.getDisplayName(TextStyle.SHORT, locale)
-                        val endMonthName = endOfWeek.month.getDisplayName(TextStyle.SHORT, locale)
-                        val label = if (startMonthName == endMonthName) {
-                            "${startOfWeek.dayOfMonth}–${endOfWeek.dayOfMonth} $startMonthName"
-                        } else {
-                            "${startOfWeek.dayOfMonth} $startMonthName – ${endOfWeek.dayOfMonth} $endMonthName"
-                        }
-                        // Example: "1–7 Jan"
-
-                        ChartPoint(
-                            label = label,
-                            income = income,
-                            expense = expense,
-                        )
-                    }
-            }
-
-            Timeframe.MONTHLY -> {
-                // one point per YearMonth
-                transactions
-                    .groupBy {
-                        val d = it.date.toLocalDate()
-                        YearMonth.of(d.year, d.month)
-                    }
-                    .toSortedMap()
-                    .map { (yearMonth, txs) ->
-                        val expense = txs.sumOf { it.totalAmount }
-                        val income = expense * 1.3
-
-                        val monthName = yearMonth.month.getDisplayName(TextStyle.SHORT, locale)
-                        val label = "$monthName ${yearMonth.year}"   // "Jan 2025"
-
-                        ChartPoint(
-                            label = label,
-                            income = income,
-                            expense = expense,
-                        )
-                    }
-            }
-
-            Timeframe.YEARLY -> {
-                // one point per year
-                transactions
-                    .groupBy { it.date.toLocalDate().year }
-                    .toSortedMap()
-                    .map { (year, txs) ->
-                        val expense = txs.sumOf { it.totalAmount }
-                        val income = expense * 1.3
-
-                        ChartPoint(
-                            label = year.toString(),  // "2025"
-                            income = income,
-                            expense = expense,
-                        )
-                    }
-            }
+            Timeframe.DAILY -> aggregateBuckets(transactions, startDateTime, effectiveEndDateTime, ChronoUnit.HOURS, 6)
+            Timeframe.MONTHLY -> aggregateBuckets(transactions, startDateTime, effectiveEndDateTime, ChronoUnit.DAYS, 6)
+            Timeframe.WEEKLY -> aggregateBuckets(transactions, startDateTime, effectiveEndDateTime, ChronoUnit.DAYS, 7)
+            Timeframe.YEARLY -> aggregateBuckets(transactions, startDateTime, effectiveEndDateTime, ChronoUnit.MONTHS, 6)
         }
     }
 
-    /**
-     * Filters a list of transactions so that only those whose dates fall within the
-     * specified date range are returned.
-     *
-     * This function supports partial ranges:
-     * - If both [startDate] and [endDate] are `null`, all transactions are returned unchanged.
-     * - If only [startDate] is provided, all transactions on or after that date are included.
-     * - If only [endDate] is provided, all transactions on or before that date are included.
-     * - If both are provided, transactions must fall within the inclusive range
-     *   `[startDate, endDate]`.
-     *
-     * Internally, each transaction's `Date` is converted to `LocalDate` using the device
-     * timezone before comparisons are performed.
-     *
-     * @param transactions the complete list of [Transactions] to filter.
-     * @param startDate the earliest allowed transaction date, or `null` to disable lower bound filtering.
-     * @param endDate the latest allowed transaction date, or `null` to disable upper bound filtering.
-     *
-     * @return a list of transactions whose dates fall within the specified range.
-     */
-    private fun filterTransactionsByRange(
+    private fun aggregateBuckets(
         transactions: List<Transactions>,
-        startDate: LocalDate?,
-        endDate: LocalDate?,
-    ): List<Transactions> {
-        if (startDate == null && endDate == null) return transactions
+        start: LocalDateTime,
+        end: LocalDateTime,
+        unit: ChronoUnit,
+        targetBuckets: Int
+    ): List<ChartPoint> {
+        val points = mutableListOf<ChartPoint>()
+        val locale = Locale.getDefault()
+        val totalUnits = unit.between(start, end)
+        val step = ceil((totalUnits + 1).toDouble() / targetBuckets.toDouble()).toLong().coerceAtLeast(1)
 
-        return transactions.filter { tx ->
-            val d = tx.date.toLocalDate()
-            val afterStart = startDate?.let { !d.isBefore(it) } ?: true
-            val beforeEnd = endDate?.let { !d.isAfter(it) } ?: true
-            afterStart && beforeEnd
+        var currentStart = start
+        while (!currentStart.isAfter(end)) {
+            var currentEnd = currentStart.plus(step - 1, unit)
+            if (currentEnd.isAfter(end)) currentEnd = end
+            val queryEnd = if (unit == ChronoUnit.HOURS) currentEnd.plusMinutes(59) else currentEnd.toLocalDate().atTime(LocalTime.MAX)
+
+            val bucketTxs = transactions.filter {
+                val txTime = it.date.toLocalDateTime()
+                !txTime.isBefore(currentStart) && !txTime.isAfter(queryEnd)
+            }
+
+            val income = bucketTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.totalAmount }
+            val expense = bucketTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.totalAmount }
+            val label = formatBucketLabel(currentStart, currentEnd, unit, locale)
+
+            points.add(ChartPoint(label, income, expense, currentStart))
+            currentStart = currentStart.plus(step, unit)
+            if (step <= 0) break
+        }
+        return points
+    }
+
+    private fun formatBucketLabel(start: LocalDateTime, end: LocalDateTime, unit: ChronoUnit, locale: Locale): String {
+        return when (unit) {
+            ChronoUnit.HOURS -> {
+                val fmt = DateTimeFormatter.ofPattern("HH:00", locale)
+                if (start.hour == end.hour) start.format(fmt) else "${start.format(fmt)}-${end.format(fmt)}"
+            }
+            ChronoUnit.DAYS -> {
+                val fmt = DateTimeFormatter.ofPattern("d MMM", locale)
+                if (start.toLocalDate() == end.toLocalDate()) start.format(fmt) else "${start.format(DateTimeFormatter.ofPattern("d", locale))}-${end.format(fmt)}"
+            }
+            ChronoUnit.MONTHS -> {
+                val fmt = DateTimeFormatter.ofPattern("MMM", locale)
+                if (start.month == end.month && start.year == end.year) start.format(fmt) else "${start.format(fmt)}-${end.format(fmt)}"
+            }
+            else -> start.toLocalDate().toString()
         }
     }
 
-
-    /**
-     * Convert java.util.Date -> LocalDate.
-     */
-    private fun Date.toLocalDate(): LocalDate =
-        this.toInstant()
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
+    private fun Date.toLocalDate(): LocalDate = this.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    private fun Date.toLocalDateTime(): LocalDateTime = this.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
 }
-

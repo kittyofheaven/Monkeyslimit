@@ -17,7 +17,7 @@ val Wheat = Color(0xFFF9E2B6)
 val Sunglow = Color(0xFFFACF69)
 val GoldenRod = Color(0xFFD5A007)
 val Avocado = Color(0xFF6C8B08)
-val DrabDarkBrown = Color(0xFF2B2202)
+val DrabDarkBrown = Color(0xFF1E1400)
 
 //Dark mode
 val DarkBlack = Color(0xFF000000)
