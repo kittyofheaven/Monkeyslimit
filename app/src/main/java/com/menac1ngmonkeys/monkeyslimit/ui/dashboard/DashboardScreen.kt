@@ -49,7 +49,8 @@ fun DashboardScreenContent(
     modifier: Modifier = Modifier,
     appUiState: AppUiState, // UI for all of the screens
     dashboardUiState: DashboardUiState, // It accepts the UI state directly
-    onFilterSelected: (DashboardFilter) -> Unit = {}
+    onFilterSelected: (DashboardFilter) -> Unit = {},
+    onTransactionClick: (Int) -> Unit = {}
 ) {
     val totalBalance = appUiState.totalBalance
     val totalExpense = appUiState.totalExpense
@@ -110,7 +111,10 @@ fun DashboardScreenContent(
                 ) {
                     // Tell the LazyColumn to use the list from our ViewModel's state
                     items(dashboardUiState.recentTransactions) { transaction ->
-                        TransactionRow(transaction = transaction)
+                        TransactionRow(
+                            transaction = transaction,
+                            onClick = onTransactionClick,
+                        )
                     }
                     item { Spacer(Modifier.size(20.dp)) }
                 }
@@ -188,7 +192,8 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     // Use the factory to create an instance of our ViewModel
     dashboardViewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    appViewModel: AppViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    appViewModel: AppViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    navController: androidx.navigation.NavController,
 ) {
     // Collect the state from the ViewModel. Every time the state changes,
     // this Composable will automatically recompose with the new data.
@@ -201,7 +206,11 @@ fun DashboardScreen(
         modifier = modifier,
         appUiState = appUiState,
         dashboardUiState = dashboardUiState,
-        onFilterSelected = dashboardViewModel::updateFilter
+        onFilterSelected = dashboardViewModel::updateFilter,
+        onTransactionClick = { transactionId ->
+            // Navigate to detail
+            navController.navigate("transaction_detail/$transactionId")
+        }
     )
 }
 

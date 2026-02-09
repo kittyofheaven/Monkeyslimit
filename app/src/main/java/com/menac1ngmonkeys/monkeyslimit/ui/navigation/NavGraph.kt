@@ -26,6 +26,8 @@ import com.menac1ngmonkeys.monkeyslimit.ui.profile.ProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.settings.SettingsScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.ReviewSmartSplitScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SelectMemberScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SmartSplitDetailScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SmartSplitHistoryScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SmartSplitScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.smartsplit.SplitResultScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftMember
@@ -81,7 +83,19 @@ fun NavGraph(
         modifier = modifier
     ) {
         composable(NavItem.Dashboard.route) {
-            DashboardScreen()
+            DashboardScreen(navController = navController)
+        }
+        composable(
+            route = NavItem.TransactionDetail.route,
+            arguments = listOf(navArgument("transactionId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getInt("transactionId") ?: return@composable
+
+            // Import this screen first
+            com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDetailScreen(
+                transactionId = transactionId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(NavItem.Budget.route) {
             BudgetScreen(navController = navController)
@@ -97,7 +111,31 @@ fun NavGraph(
                     // Reference the NavItem and replace the placeholder
                     val route = NavItem.ReviewSmartSplit.route.replace("{imageUri}", encodedUri)
                     navController.navigate(route)
+                },
+                onHistoryClick = { // Handle the new callback
+                    navController.navigate(NavItem.SmartSplitHistory.route)
                 }
+            )
+        }
+        // Update History Route to handle click
+        composable(NavItem.SmartSplitHistory.route) {
+            SmartSplitHistoryScreen(
+                onItemClick = { splitId ->
+                    navController.navigate("smart_split_detail/$splitId")
+                }
+            )
+        }
+
+        // Add Detail Route
+        composable(
+            route = "smart_split_detail/{splitId}",
+            arguments = listOf(navArgument("splitId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val splitId = backStackEntry.arguments?.getInt("splitId") ?: return@composable
+
+            SmartSplitDetailScreen(
+                splitId = splitId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(

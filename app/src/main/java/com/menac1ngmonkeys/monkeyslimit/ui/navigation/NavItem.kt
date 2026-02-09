@@ -113,10 +113,34 @@ sealed class NavItem (
         showTopBar = true
     )
 
+    object SmartSplitHistory : NavItem(
+        route = "smart_split_history",
+        title = "History",
+        iconId = 0, // Assuming you have an icon, or use 0
+        showBottomBar = false,
+        showTopBar = true
+    )
+
+    object SmartSplitDetail : NavItem(
+        route = "smart_split_detail/{splitId}",
+        title = "Split Detail",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
     object Transaction : NavItem(
         route = "transaction",
         title = "Transaction",
         iconId = R.drawable.add_1_40dp,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
+    object TransactionDetail : NavItem(
+        route = "transaction_detail/{transactionId}",
+        title = "Transaction Detail",
+        iconId = 0,
         showBottomBar = false,
         showTopBar = true
     )
@@ -175,7 +199,9 @@ sealed class NavItem (
             ReviewTransaction,
             ReviewSmartSplit,
             SelectMember,
-            SplitResult
+            SplitResult,
+            SmartSplitHistory,
+            SmartSplitDetail
         )
 
         val FABMenu = listOf(
