@@ -1,9 +1,9 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.smartsplit
 
+import AppViewModelProvider
 import android.Manifest
 import android.content.Context
 import android.net.Uri
-import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
@@ -20,31 +20,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -53,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -60,29 +46,39 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SmartSplitViewModel
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SmartSplitScreen(
-    onImagePicked: (Uri) -> Unit = {} // Added to handle both gallery and camera results
+    onImagePicked: (Uri) -> Unit = {},
+    onHistoryClick: () -> Unit = {},
+    viewModel: SmartSplitViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val context = LocalContext.current
     val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
+    val uiState by viewModel.uiState.collectAsState()
 
-    // --- 1. Gallery Launcher Setup ---
+    // Wrapper to handle validation before navigation
+    val handleImageSelection: (Uri) -> Unit = { uri ->
+        viewModel.validateReceipt(context, uri) {
+            // Only navigate if valid
+            onImagePicked(uri)
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
             Log.d("SmartSplit", "Image picked from gallery: $uri")
-            onImagePicked(uri)
+            handleImageSelection(uri)
         }
     }
 
@@ -92,22 +88,57 @@ fun SmartSplitScreen(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color.Black,
-        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
-    ) {
-        if (permissionState.status.isGranted) {
-            CameraContent(
-                onGalleryClick = { galleryLauncher.launch("image/*") },
-                onPhotoCaptured = { uri -> onImagePicked(uri) }
-            )
-        } else {
+    // --- VALIDATION ERROR DIALOG ---
+    if (uiState.validationError != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissError() },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Invalid Receipt") },
+            text = { Text(uiState.validationError!!) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissError() }) { Text("OK") }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    // --- LOADING OVERLAY ---
+    Box(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black,
+            shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
+        ) {
+            if (permissionState.status.isGranted) {
+                CameraContent(
+                    onGalleryClick = { galleryLauncher.launch("image/*") },
+                    onPhotoCaptured = { uri -> handleImageSelection(uri) },
+                    onHistoryClick = onHistoryClick
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Camera permission required", color = Color.White)
+                }
+            }
+        }
+
+        // Loading Indicator Overlay
+        if (uiState.isValidating) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(enabled = false) {}, // Block touches
                 contentAlignment = Alignment.Center
             ) {
-                Text("Camera permission required", color = Color.White)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color(0xFFFDD86A))
+                    Spacer(Modifier.height(16.dp))
+                    Text("Analyzing Receipt...", color = Color.White)
+                }
             }
         }
     }
@@ -116,7 +147,8 @@ fun SmartSplitScreen(
 @Composable
 fun CameraContent(
     onGalleryClick: () -> Unit,
-    onPhotoCaptured: (Uri) -> Unit
+    onPhotoCaptured: (Uri) -> Unit,
+    onHistoryClick: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -137,19 +169,13 @@ fun CameraContent(
         }
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Black)) {
-
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
             factory = { ctx ->
                 PreviewView(ctx).apply {
                     scaleType = PreviewView.ScaleType.FILL_CENTER
                     implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                     controller = cameraController
                 }
             },
@@ -158,9 +184,7 @@ fun CameraContent(
 
         // --- FLASH BUTTON ---
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             contentAlignment = Alignment.TopEnd
         ) {
             IconButton(onClick = {
@@ -178,9 +202,7 @@ fun CameraContent(
 
         // --- BRACKETS (Center Overlay) ---
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 100.dp, bottom = 150.dp, start = 40.dp, end = 40.dp),
+            modifier = Modifier.fillMaxSize().padding(top = 100.dp, bottom = 150.dp, start = 40.dp, end = 40.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -188,7 +210,6 @@ fun CameraContent(
                 val cornerLength = 40.dp.toPx()
                 val color = Color.White.copy(alpha = 0.8f)
                 val style = Stroke(width = strokeWidth)
-
                 drawArc(color, 180f, 90f, false, Offset(0f, 0f), Size(cornerLength * 2, cornerLength * 2), style = style)
                 drawArc(color, 270f, 90f, false, Offset(size.width - cornerLength * 2, 0f), Size(cornerLength * 2, cornerLength * 2), style = style)
                 drawArc(color, 90f, 90f, false, Offset(0f, size.height - cornerLength * 2), Size(cornerLength * 2, cornerLength * 2), style = style)
@@ -196,110 +217,53 @@ fun CameraContent(
             }
         }
 
-        // --- BOTTOM CONTROLS (Updated) ---
+        // --- BOTTOM CONTROLS ---
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(bottom = 50.dp, start = 20.dp, end = 20.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 50.dp, start = 20.dp, end = 20.dp)
         ) {
-            // 1. Shutter Button (Absolute Center)
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.Center)
-                    .border(4.dp, Color(0xFFFDD86A), CircleShape)
-                    .padding(6.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable {
-                        takePhotoToCache(context, cameraController, onPhotoCaptured)
-                    }
-            )
-
-            // 2. Gallery Button (Aligned to Right)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 40.dp)
-            ) {
-                YellowCircleButton(
-                    iconId = NavItem.GallerySplit.iconId,
-                    onClick = onGalleryClick
-                )
+            // 1. History Button (Left)
+            Box(modifier = Modifier.align(Alignment.CenterStart).padding(start = 40.dp)) {
+                YellowCircleButton(imageVector = Icons.Default.History, onClick = onHistoryClick)
+            }
+            // 2. Shutter Button (Center)
+            Box(modifier = Modifier.size(80.dp).align(Alignment.Center).border(4.dp, Color(0xFFFDD86A), CircleShape).padding(6.dp).clip(CircleShape).background(Color.White).clickable { takePhotoToCache(context, cameraController, onPhotoCaptured) })
+            // 3. Gallery Button (Right)
+            Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 40.dp)) {
+                YellowCircleButton(iconId = NavItem.GallerySplit.iconId, onClick = onGalleryClick)
             }
         }
     }
 }
 
 @Composable
-fun YellowCircleButton(
-    iconId: Int,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(50.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFFDD86A))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(iconId),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(24.dp)
-        )
+fun YellowCircleButton(iconId: Int, onClick: () -> Unit) {
+    Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Color(0xFFFDD86A)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(painter = painterResource(iconId), contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+    }
+}
+
+@Composable
+fun YellowCircleButton(imageVector: ImageVector, onClick: () -> Unit) {
+    Box(modifier = Modifier.size(50.dp).clip(CircleShape).background(Color(0xFFFDD86A)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(imageVector = imageVector, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
     }
 }
 
 fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
-    this.clickable(
-        indication = null,
-        interactionSource = remember { MutableInteractionSource() }
-    ) {
-        onClick()
-    }
+    this.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onClick() }
 }
 
-// --- UPDATED CAPTURE LOGIC ---
-private fun takePhotoToCache(
-    context: Context,
-    cameraController: LifecycleCameraController,
-    onPhotoCaptured: (Uri) -> Unit
-) {
-    // 1. Create a temporary file in the app's CACHE directory
-    // This does NOT save to the Gallery.
-    val photoFile = File.createTempFile(
-        "temp_receipt_",
-        ".jpg",
-        context.cacheDir
-    )
-
-    // 2. Create OutputOptions pointing to this file
+private fun takePhotoToCache(context: Context, cameraController: LifecycleCameraController, onPhotoCaptured: (Uri) -> Unit) {
+    val photoFile = File.createTempFile("temp_receipt_", ".jpg", context.cacheDir)
     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-    // 3. Take Picture
-    cameraController.takePicture(
-        outputOptions,
-        ContextCompat.getMainExecutor(context),
-        object : ImageCapture.OnImageSavedCallback {
-            override fun onError(exc: ImageCaptureException) {
-                Log.e("SmartSplit", "Photo capture failed: ${exc.message}", exc)
-                Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                // 4. Get the URI using FileProvider
-                // Make sure you have the <provider> set up in AndroidManifest!
-                val savedUri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.provider",
-                    photoFile
-                )
-                onPhotoCaptured(savedUri)
-            }
+    cameraController.takePicture(outputOptions, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
+        override fun onError(exc: ImageCaptureException) {
+            Log.e("SmartSplit", "Photo capture failed: ${exc.message}", exc)
+            Toast.makeText(context, "Capture failed", Toast.LENGTH_SHORT).show()
         }
-    )
+        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+            val savedUri = FileProvider.getUriForFile(context, "${context.packageName}.provider", photoFile)
+            onPhotoCaptured(savedUri)
+        }
+    })
 }

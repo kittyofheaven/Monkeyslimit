@@ -17,8 +17,12 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewSmartSplitViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ScanTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.SelectMemberViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SmartSplitHistoryViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SmartSplitDetailViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.SmartSplitViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplashViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplitResultViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.TransactionDetailViewModel
 
 /**
  * Central ViewModel factory wiring repositories from the application container.
@@ -111,6 +115,16 @@ object AppViewModelProvider {
                 membersRepository = monkeysLimitApplication().container.membersRepository
             )
         }
+        // Initializer for SmartSplitHistoryViewModel
+        initializer {
+            SmartSplitHistoryViewModel(
+                smartSplitsRepository = monkeysLimitApplication().container.smartSplitsRepository
+            )
+        }
+        // Initializer for SmartSplitViewModel
+        initializer {
+            SmartSplitViewModel()
+        }
         // You'll add initializers for other ViewModels here in the future
     }
 }
@@ -127,6 +141,46 @@ class BudgetDetailViewModelFactory(private val budgetId: Int) : ViewModelProvide
             return BudgetDetailViewModel(
                 budgetId = budgetId,
                 budgetsRepository = container.budgetsRepository,
+                transactionsRepository = container.transactionsRepository,
+                categoriesRepository = container.categoriesRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+/**
+ * Factory for creating SmartSplitDetailViewModel with a dynamic splitId.
+ */
+class SmartSplitDetailViewModelFactory(private val splitId: Int) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        if (modelClass.isAssignableFrom(SmartSplitDetailViewModel::class.java)) {
+            val application = extras.monkeysLimitApplication()
+            val container = application.container
+            @Suppress("UNCHECKED_CAST")
+            return SmartSplitDetailViewModel(
+                splitId = splitId,
+                smartSplitsRepository = container.smartSplitsRepository,
+                membersRepository = container.membersRepository,
+                itemsRepository = container.itemsRepository,
+                memberItemsRepository = container.memberItemsRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+    }
+}
+
+/**
+ * Factory for creating TransactionDetailViewModel with a dynamic transactionId.
+ */
+class TransactionDetailViewModelFactory(private val transactionId: Int) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        if (modelClass.isAssignableFrom(TransactionDetailViewModel::class.java)) {
+            val application = extras.monkeysLimitApplication()
+            val container = application.container
+            @Suppress("UNCHECKED_CAST")
+            return TransactionDetailViewModel(
+                transactionId = transactionId,
                 transactionsRepository = container.transactionsRepository,
                 categoriesRepository = container.categoriesRepository
             ) as T

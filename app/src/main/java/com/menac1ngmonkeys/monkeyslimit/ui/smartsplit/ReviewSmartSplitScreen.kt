@@ -2,6 +2,7 @@ package com.menac1ngmonkeys.monkeyslimit.ui.smartsplit
 
 import AppViewModelProvider
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,8 +61,31 @@ fun ReviewSmartSplitScreen(
     viewModel: ReviewSmartSplitViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    LaunchedEffect(imageUri) { viewModel.setImageUri(imageUri) }
+    // --- ADDED: Error Handling ---
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+
+            // Optional: If you want to go back automatically on invalid bill:
+            // if (msg == "Not a valid bill") onNavigateBack()
+        }
+    }
+
+    // FIX: Only trigger scan if the image is NEW (different from what's already in ViewModel)
+    LaunchedEffect(imageUri) {
+        viewModel.checkBackendHealth()
+
+        if (imageUri != null && imageUri != uiState.imageUri) {
+            // 1. Update the state with the new URI
+            viewModel.setImageUri(imageUri)
+
+            // 2. Perform the scan
+            viewModel.scanReceipt(context, Uri.parse(imageUri))
+        }
+    }
 
     // Navigation Listener
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
