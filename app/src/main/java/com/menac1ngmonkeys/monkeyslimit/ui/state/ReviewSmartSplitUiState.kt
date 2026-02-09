@@ -32,7 +32,9 @@ data class ReviewSmartSplitUiState(
 
     val availableMembers: List<Members> = emptyList(),
     val selectedMemberIdForAssignment: Int? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+
+    val errorMessage: String? = null
 ) {
     val subtotal: Double
         get() = items.sumOf { it.price * it.quantity }

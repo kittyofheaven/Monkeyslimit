@@ -23,6 +23,10 @@ interface ItemsDao {
     @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId")
     suspend fun getItemsBySmartSplitNow(smartSplitId: Int): List<Items>
 
+    // NEW: Flow version for reactive UI / ViewModel usage
+    @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId")
+    fun getItemsBySmartSplitId(smartSplitId: Int): Flow<List<Items>>
+
     @Query("SELECT COUNT(*) FROM items")
     suspend fun count(): Int
 

@@ -109,13 +109,13 @@ class ScanTransactionViewModel : ViewModel() {
             "berhasil", "success", "successful", "selesai", "paid", "lunas",
             // Receipt Identifiers
             "id transaksi", "transaction id", "no. ref", "reference", "struk", "receipt",
-            "invoice", "order id", "kode bayar", "payment to", "merchant"
+            "invoice", "order id", "kode bayar", "payment to", "merchant", "pbi"
         )
         strongKeywords.forEach { if (lowerText.contains(it)) score += 2 }
 
         // 3. WEAK INDICATORS (Common Words) - Weight: +1
         val weakKeywords = listOf(
-            "total", "subtotal", "jumlah", "amount", "bayar", "cash", "tunai",
+            "total", "subtotal", "sub-total", "sub total", "jumlah", "amount", "bayar", "cash", "tunai",
             "kembali", "change", "tax", "pajak", "admin", "fee", "biaya"
         )
         weakKeywords.forEach { if (lowerText.contains(it)) score += 1 }

@@ -10,6 +10,8 @@ class ItemsRepository(private val itemsDao: ItemsDao) {
 
     fun getItemById(id: Int): Flow<Items?> = itemsDao.getItemById(id)
 
+    fun getItemsBySplitId(splitId: Int): Flow<List<Items>> = itemsDao.getItemsBySmartSplitId(splitId)
+
     suspend fun insert(items: Items): Long {
         return itemsDao.insert(items)
     }

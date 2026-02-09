@@ -122,6 +122,7 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
 //    Log.d("TransactionItemData", "realCategory.name: ${realCategory.name}")
 
     return TransactionItemData(
+        id = this.id,
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(), // We use a helper for the date

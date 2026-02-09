@@ -2,6 +2,7 @@ package com.menac1ngmonkeys.monkeyslimit.ui.dashboard
 
 import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,10 +37,15 @@ import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 // Add this new composable to your DashboardScreen.kt file
 
 @Composable
-fun TransactionRow(transaction: TransactionItemData, modifier: Modifier = Modifier) {
+fun TransactionRow(
+    transaction: TransactionItemData,
+    modifier: Modifier = Modifier,
+    onClick: (Int) -> Unit = {},
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clickable { onClick(transaction.id) }
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -143,12 +149,13 @@ fun TransactionRowPreview() {
     MonkeyslimitTheme {
         TransactionRow(
             transaction = TransactionItemData(
+                id = 0,
                 iconResId = R.drawable.food,
                 title = "Groceries",
                 subtitle = "17:00 - April 24",
                 category = "Pantry",
                 amount = 100000.0,
-                isExpense = true
+                isExpense = true,
             )
         )
     }

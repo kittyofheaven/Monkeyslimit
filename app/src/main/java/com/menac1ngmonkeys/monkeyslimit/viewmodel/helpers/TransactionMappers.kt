@@ -31,6 +31,7 @@ fun Transactions.toTransactionItemData(category: Categories?): TransactionItemDa
     }
 
     return TransactionItemData(
+        id = this.id,
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(),
