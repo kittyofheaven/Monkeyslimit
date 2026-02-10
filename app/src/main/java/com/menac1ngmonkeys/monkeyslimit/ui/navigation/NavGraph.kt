@@ -35,6 +35,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ReviewTransactionScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ScanTransactionScreen
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
+import com.menac1ngmonkeys.monkeyslimit.ui.profile.EditProfileScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -142,8 +143,12 @@ fun NavGraph(
                 onNavigateToProfile = { navController.navigateSingleTopTo(NavItem.Profile.route) }
             )
         }
+
         composable(NavItem.Profile.route) {
             ProfileScreen(navController = navController)
+        }
+        composable("edit_profile") {
+            EditProfileScreen(navController)
         }
         composable(NavItem.CompleteProfile.route) {
             CompleteProfileScreen(onComplete = {
