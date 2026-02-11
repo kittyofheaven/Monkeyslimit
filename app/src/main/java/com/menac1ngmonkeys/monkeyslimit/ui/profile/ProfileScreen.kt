@@ -1,211 +1,313 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import coil.compose.AsyncImage
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileUiState
-import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
-    modifier: Modifier = Modifier,
     navController: NavHostController,
     profileViewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // State to control the visibility of the sign-out dialog
-    var showSignOutDialog by remember { mutableStateOf(false) }
+    val uiState by profileViewModel.uiState.collectAsState()
 
-    // Sign Out Confirmation Dialog
-    if (showSignOutDialog) {
+    var darkMode by remember { mutableStateOf(false) }
+    var notification by remember { mutableStateOf(true) }
+
+    if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out") },
-            text = { Text("Are you sure you want to log out of your account?") },
+            onDismissRequest = {
+                showLogoutDialog = false
+            },
+            title = {
+                Text("Logout")
+            },
+            text = {
+                Text("Are you sure you want to log out?")
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showSignOutDialog = false
+                        showLogoutDialog = false
                         authViewModel.signOut()
                     }
                 ) {
-                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                    Text("Yes")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                    }
+                ) {
                     Text("Cancel")
                 }
             }
         )
     }
 
-    ProfileScreenContent(
-        modifier = modifier,
-        uiState = profileUiState,
-        onNavigateBack = { navController.navigateUp() },
-        onSignOutClick = { showSignOutDialog = true } // Trigger the dialog instead of direct sign out
-    )
-}
 
-@Composable
-fun ProfileScreenContent(
-    modifier: Modifier = Modifier,
-    uiState: ProfileUiState,
-    onNavigateBack: () -> Unit,
-    onSignOutClick: () -> Unit,
-) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .background(Color(0xffffff))
+            .padding(16.dp)
     ) {
-        ProfileHeader(name = uiState.name, email = uiState.email, photoUrl = uiState.photoUrl)
-        ProfileInfoCard(uiState = uiState)
-        ProfileActions(onSignOutClick = onSignOutClick)
+        ProfileHeader(uiState = uiState, onEditClick = {
+            navController.navigate("edit_profile")
+        })
+
+        Spacer(Modifier.height(24.dp))
+
+        SettingToggle(
+            icon = Icons.Default.Notifications,
+            title = "Notifications",
+            checked = notification,
+            onCheckedChange = { notification = it }
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        SettingItem(
+            icon = Icons.Default.Inbox,
+            title = "Inbox",
+            onClick = { }
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        SettingItem(
+            icon = Icons.Default.Help,
+            title = "FAQ",
+            onClick = { }
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        SettingItem(
+            icon = Icons.Default.Logout,
+            title = "Log Out",
+            onClick = {
+                showLogoutDialog = true
+            }
+        )
     }
 }
 
+/* ---------------- TOP BAR ---------------- */
+
 @Composable
-private fun ProfileHeader(name: String, email: String, photoUrl: String?) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun TopBar(onBack: () -> Unit) {
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(
-            model = photoUrl ?: R.drawable.account_circle_24dp, // Fallback to local drawable
-            contentDescription = "Profile Picture",
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
+
+        IconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
         Text(
-            text = name,
+            text = "My Profile",
+            fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = email,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = Color(0xFF7A9B00)
         )
     }
 }
 
+/* ---------------- HEADER ---------------- */
+
 @Composable
-private fun ProfileInfoCard(uiState: ProfileUiState) {
+private fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
+    ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+            ){
+                AsyncImage(
+                    model = uiState.photoUrl ?: R.drawable.account_circle_24dp,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                )
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+
+                Row(
+
+                ) {
+                    Text(
+                        uiState.name,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                Spacer(Modifier.height(3.dp))
+
+                Row(
+
+                ){
+                    Text(
+                        uiState.email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+
+                Spacer(Modifier.height(3.dp))
+
+                Box {
+
+                    // Figma-style shadow
+
+                    // Button
+                    Button(
+                        onClick = { onEditClick()},
+                        shape = RoundedCornerShape(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFACF69)
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(0.dp)
+                    ) {
+                        Text("Edit Profile", color = Color.Black)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ---------------- TOGGLE ITEM ---------------- */
+
+@Composable
+private fun SettingToggle(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(Color.White)
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            ProfileInfoRow(icon = Icons.Default.Person, label = "Age", value = "${uiState.age} years old")
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileInfoRow(icon = Icons.Default.Cake, label = "Date of Birth", value = uiState.dateOfBirth)
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileInfoRow(icon = Icons.Default.Call, label = "Phone Number", value = uiState.phoneNumber)
+
+            Icon(icon, null, tint = Color(0xFFFFB300))
+
+            Spacer(Modifier.width(16.dp))
+
+            Text(
+                title,
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.Medium
+            )
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
         }
     }
 }
 
+/* ---------------- LIST ITEM ---------------- */
+
 @Composable
-private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
-    Row(
+private fun SettingItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(Color.White)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(Modifier.width(16.dp))
-        Column {
-            Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
 
-@Composable
-private fun ProfileActions(
-    onSignOutClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Button(
-            onClick = { /* TODO: Navigate to Edit Profile screen */ },
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit Profile", modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-            Text("Edit Profile")
-        }
-        OutlinedButton(
-            onClick = onSignOutClick,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out", modifier = Modifier.size(ButtonDefaults.IconSize))
-            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-            Text("Sign Out")
-        }
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-private fun ProfileScreenPreview() {
-    MonkeyslimitTheme {
-        ProfileScreenContent(
-            uiState = ProfileUiState(
-                name = "Matthew",
-                email = "matthew.awesome@email.com",
-                age = 25,
-                dateOfBirth = "January 1, 2000",
-                phoneNumber = "+62 812 3456 7890"
-            ),
-            onNavigateBack = {},
-            onSignOutClick = {},
-        )
+            Icon(icon, null, tint = Color(0xFFFFB300))
+
+            Spacer(Modifier.width(16.dp))
+
+            Text(
+                title,
+                modifier = Modifier.weight(1f),
+                fontWeight = FontWeight.Medium
+            )
+
+            Icon(
+                Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.Gray
+            )
+        }
     }
 }

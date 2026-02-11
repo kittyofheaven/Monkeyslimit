@@ -55,10 +55,10 @@ fun TopBar(
         },
         actions = {
             if (currentRoute == NavItem.Dashboard.route) {
-                IconButton(onClick = onSettingsClick) {
+                IconButton(onClick = onProfileClick) {
                     Icon(
-                        painter = painterResource(NavItem.Settings.iconId),
-                        contentDescription = NavItem.Settings.title
+                        painter = painterResource(NavItem.Profile.iconId),
+                        contentDescription = NavItem.Profile.title
                     )
                 }
             }
