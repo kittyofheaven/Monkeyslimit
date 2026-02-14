@@ -34,3 +34,19 @@ data class OcrSubTotal(
 data class OcrTotal(
     @SerializedName("total_price") val totalPrice: String?
 )
+
+// --- NEW: Classification Models ---
+
+data class ClassifyRequest(
+    val text: String
+)
+
+data class ClassifyResponse(
+    val ok: Boolean,
+    val data: ClassifyData?,
+    val error: String?
+)
+
+data class ClassifyData(
+    val prediction: String
+)

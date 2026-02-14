@@ -96,7 +96,7 @@ class ScanTransactionViewModel : ViewModel() {
         // These words appear in App UI but rarely on a physical/digital receipt
         val blockList = listOf(
             "add a new budget", "ai recommendation", "analytics", "split bill",
-            "budgeted", "left", "spent", "sort", "kb/s", "4g", "wifi"
+            "budgeted", "left", "spent", "sort", "wifi"
         )
         if (blockList.any { lowerText.contains(it) }) {
             Log.w("ReceiptScanner", "Blocked: Detected App UI keywords.")
@@ -129,10 +129,10 @@ class ScanTransactionViewModel : ViewModel() {
         val dateRegex = Regex("\\d{1,4}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{1,2}\\s+[a-z]{3,}", RegexOption.IGNORE_CASE)
         if (dateRegex.containsMatchIn(text)) score += 1
 
-        Log.d("ReceiptScanner", "Document Score: $score (Threshold: 4)")
+        Log.d("ReceiptScanner", "Document Score: $score (Threshold: 3)")
 
         // INCREASED THRESHOLD:
         // Needs (Currency + 1 Strong Keyword) OR (Currency + 2 Weak Keywords)
-        return score >= 4
+        return score >= 3
     }
 }

@@ -63,7 +63,6 @@ dependencies {
 
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
-//    implementation(libs.googleid)
     implementation(libs.googleid)
 
     implementation(libs.coil.compose)
@@ -98,9 +97,14 @@ dependencies {
     implementation(libs.play.services.mlkit.text.recognition)
 
     // Retrofit & OkHttp
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
+
+    // Compose Cropper for image zoom, pan, rotate
+    implementation(libs.compose.cropper)
+
+    implementation(libs.androidx.runtime.livedata)
 
     // ---------------- Permissions ----------------
     implementation(libs.androidx.concurrent.futures.ktx)
