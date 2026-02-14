@@ -1,17 +1,25 @@
 package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.menac1ngmonkeys.monkeyslimit.R
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
+import com.menac1ngmonkeys.monkeyslimit.data.repository.UsersRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionItemData
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardFilter
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardNotification
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.formatCurrency
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,91 +27,186 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.random.Random
 
-// The ViewModel takes the Repository as a dependency
-/**
- * Produces dashboard UI state by combining transactions, categories, and budgets.
- *
- * Sorts transactions, maps them to UI-friendly items, and emits them as [StateFlow].
- *
- * @param transactionsRepository source of transactions.
- * @param categoriesRepository source of categories for labeling/icon mapping.
- * @param budgetsRepository source of budgets (used for totals if needed).
- * @property dashboardUiState live dashboard state consumed by the UI.
- */
 class DashboardViewModel(
     private val transactionsRepository: TransactionsRepository,
     private val categoriesRepository: CategoriesRepository,
     private val budgetsRepository: BudgetsRepository,
+    private val usersRepository: UsersRepository // 1. Added Repository
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(DashboardFilter.ALL)
 
-    // This is a "cold flow" that will emit a new list whenever the database changes.
+    // Get current user ID to fetch the specific profile
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
     val dashboardUiState: StateFlow<DashboardUiState> =
-        // This `combine` function looks at both lists at once.
         combine(
-            flow = transactionsRepository.getAllTransactions(),
-            flow2 = categoriesRepository.getAllCategories(),
-            flow3 = budgetsRepository.getAllBudgets(),
-            flow4 = _filter
+            transactionsRepository.getAllTransactions(),
+            categoriesRepository.getAllCategories(),
+            budgetsRepository.getAllBudgets(),
+            _filter,
+            usersRepository.getUser(currentUserId) // 2. Add User Flow
         )
-        { transactions, categories, budgets, currentFilter ->
-                // Inside here, we have the list of `transactions`, `budgets`, and `categories`.
+        { transactions, categories, budgets, currentFilter, user ->
+            // 1. Get Current Month & Year
+            val calendar = Calendar.getInstance()
+            val currentMonth = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
 
-                // Create a fast way to look up categories by their ID
-                val categoriesById = categories.associateBy { it.id }
+            val monthList = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+            val monthStr = monthList[currentMonth]
 
-                val filteredTransactions = when (currentFilter) {
-                    DashboardFilter.ALL -> transactions
-                    DashboardFilter.INCOME -> transactions.filter { it.type == TransactionType.INCOME }
-                    DashboardFilter.EXPENSE -> transactions.filter { it.type == TransactionType.EXPENSE }
-                }
+            // 2. Filter Transactions for Current Month
+            val currentMonthTransactions = transactions.filter { transaction ->
+                val txCalendar = Calendar.getInstance()
+                txCalendar.time = transaction.date
+                return@filter txCalendar.get(Calendar.MONTH) == currentMonth &&
+                        txCalendar.get(Calendar.YEAR) == currentYear
+            }
 
-                val sortedTransactions = filteredTransactions.sortedByDescending { it.date }
+            // Create a fast way to look up categories by their ID
+            val categoriesById = categories.associateBy { it.id }
 
-                // --- Convert the list for the UI ---
-                val uiTransactionList = sortedTransactions.map { singleTransaction ->
+            // 3. Apply Dashboard Filters
+            val filteredTransactions = when (currentFilter) {
+                DashboardFilter.ALL -> currentMonthTransactions
+                DashboardFilter.INCOME -> currentMonthTransactions.filter { it.type == TransactionType.INCOME }
+                DashboardFilter.EXPENSE -> currentMonthTransactions.filter { it.type == TransactionType.EXPENSE }
+            }
 
-                    val category = categoriesById[singleTransaction.categoryId]
-                    // For each transaction from the database, convert it to a UI-friendly format
-                    singleTransaction.toTransactionItemData(category = category)
-                }
+            // 4. Generate Notification with Name
+            // Get first name or default to "Friend" if empty
+            val userName = if (!user?.firstName.isNullOrBlank()) user!!.firstName else "Friend"
 
-                DashboardUiState(
-                    recentTransactions = uiTransactionList,
-                    currentFilter = currentFilter
-                )
-            }.stateIn( // 3. Convert the Flow into a StateFlow for the UI to collect
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000L),
-                initialValue = DashboardUiState() // The UI will show this initially
+            val notification = generateNotification(currentMonthTransactions, budgets, userName)
+
+            val sortedTransactions = filteredTransactions.sortedByDescending { it.date }
+
+            val uiTransactionList = sortedTransactions.map { singleTransaction ->
+                val category = categoriesById[singleTransaction.categoryId]
+                singleTransaction.toTransactionItemData(category = category)
+            }
+
+            DashboardUiState(
+                recentTransactions = uiTransactionList,
+                currentFilter = currentFilter,
+                currentMonth = monthStr,
+                notification = notification
             )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = DashboardUiState()
+        )
 
     fun updateFilter(newFilter: DashboardFilter) {
         _filter.update { newFilter }
     }
-
 }
 
-/**
- * Maps a database transaction to a UI model with formatted fields and icon.
- * This is a "translator" function. It converts a database object to a UI object.
- * 
- * @param category category matched by transaction.categoryId (nullable).
- * @return UI-ready transaction item for display.
- */
+// --- RANDOMIZED NOTIFICATION LOGIC ---
+private fun generateNotification(
+    transactions: List<Transactions>,
+    budgets: List<Budgets>,
+    userName: String
+): DashboardNotification {
+
+    val totalIncome = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.totalAmount }
+    val totalExpense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.totalAmount }
+
+    // 1. Check for OVER BUDGET (Critical Alert)
+    val spendingByBudget = transactions
+        .filter { it.type == TransactionType.EXPENSE && it.budgetId != null }
+        .groupBy { it.budgetId }
+        .mapValues { (_, txs) -> txs.sumOf { it.totalAmount } }
+
+    var worstBudget: Budgets? = null
+    var maxOverPercentage = 0.0
+
+    for (budget in budgets) {
+        val spent = spendingByBudget[budget.id] ?: 0.0
+        if (budget.limitAmount > 0) {
+            val percentage = spent / budget.limitAmount
+            if (percentage > 1.0 && percentage > maxOverPercentage) {
+                maxOverPercentage = percentage
+                worstBudget = budget
+            }
+        }
+    }
+
+    if (worstBudget != null) {
+        val percentStr = formatCurrency((maxOverPercentage * 100).minus(100)) + "%"
+
+        val alerts = listOf(
+            "Budget Exceeded!" to "You've exceeded your ${worstBudget.name} limit by $percentStr. Time to cut back, $userName!",
+            "Uh oh, $userName!" to "You went over your ${worstBudget.name} budget by $percentStr. Pump the brakes!",
+            "Red Alert!" to "Your ${worstBudget.name} spending is $percentStr over limit. Let's get back on track.",
+            "Spending Spike!" to "You're $percentStr over on ${worstBudget.name}. Review your expenses, $userName."
+        )
+        val (title, msg) = alerts.random()
+        return DashboardNotification.Alert(title, msg)
+    }
+
+    // 2. Check for WARNING (Near Limit > 85%)
+    val nearLimitBudget = budgets.firstOrNull { budget ->
+        val spent = spendingByBudget[budget.id] ?: 0.0
+        val percentage = if (budget.limitAmount > 0) spent / budget.limitAmount else 0.0
+        percentage in 0.85..1.0
+    }
+
+    if (nearLimitBudget != null) {
+        val warnings = listOf(
+            "Watch Out!" to "You're close to the limit on ${nearLimitBudget.name}, $userName.",
+            "Heads Up" to "You've used over 85% of your ${nearLimitBudget.name} budget. Spend wisely!",
+            "Careful Now" to "Your ${nearLimitBudget.name} bucket is almost full. Keep an eye on it.",
+            "Approaching Limit" to "You are nearing the cap for ${nearLimitBudget.name}. Just a friendly reminder, $userName!"
+        )
+        val (title, msg) = warnings.random()
+        return DashboardNotification.Warning(title, msg)
+    }
+
+    // 3. Check for SAVINGS ACHIEVEMENT (Good Job)
+    val dayOfMonth = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    if (totalIncome > 0 && totalExpense < totalIncome && dayOfMonth > 5) {
+        val savedAmount = totalIncome - totalExpense
+        val savedStr = formatCurrency(savedAmount)
+
+        val achievements = listOf(
+            "Hooray!" to "You've saved $savedStr so far this month. Keep it up, $userName!",
+            "Great Job, $userName!" to "Your savings are looking good at $savedStr. Financial freedom, here we come!",
+            "On Fire!" to "You have $savedStr in savings this month. You're doing great!",
+            "Smart Moves" to "By spending less, you've saved $savedStr. Proud of you, $userName.",
+            "Money Magnet" to "You attracted $savedStr in savings this month. Keep the momentum going!",
+            "Wise Choice" to "Every penny saved is a penny earned. You have $savedStr saved up."
+        )
+        val (title, msg) = achievements.random()
+        return DashboardNotification.Achievement(title, msg)
+    }
+
+    // 4. Default / Motivational (Fallback if nothing else matches)
+    // Only show occasionally or if nothing else is pressing
+    if (Random.nextBoolean()) {
+        val quotes = listOf(
+            "Motivation" to "Do not save what is left after spending, but spend what is left after saving. - Warren Buffett",
+            "Tip of the Day" to "Small daily improvements are the key to staggering long-term results.",
+            "Focus, $userName" to "A budget is telling your money where to go instead of wondering where it went.",
+            "Stay Strong" to "Financial freedom is available to those who learn about it and work for it."
+        )
+        val (title, msg) = quotes.random()
+        return DashboardNotification.Achievement("Daily Wisdom", msg) // Using Achievement style for neutral/good quotes
+    }
+
+    return DashboardNotification.None
+}
+
 private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
-    // If for some reason a category was not found, we'll use a default.
-    val realCategory = category ?: Categories(
-        id = 0,
-        name = "Other",
-        icon = null,
-        description = null
-    )
-    val isExpense = (this.type == TransactionType.EXPENSE) // Simple logic: assume anything not salary is an expense
+    val realCategory = category ?: Categories(0, "Other", null, null)
+    val isExpense = (this.type == TransactionType.EXPENSE)
 
     val icon = when (realCategory.name) {
         "Food and Beverages" -> R.drawable.food
@@ -114,25 +217,22 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
         "Health" -> R.drawable.heart_check_48px
         "Education" -> R.drawable.cognition_2_48px
         "Salary" -> R.drawable.salary
+        "Bonus" -> R.drawable.paid_48px
+        "Investment" -> R.drawable.trending_up_40dp
         else -> R.drawable.paid_48px
     }
-
-//    Log.d("TransactionItemData", "iconResId: $icon")
-//    Log.d("TransactionItemData", "realCategory.id: ${realCategory.id}")
-//    Log.d("TransactionItemData", "realCategory.name: ${realCategory.name}")
 
     return TransactionItemData(
         id = this.id,
         iconResId = icon,
         title = this.note ?: "Transaction",
-        subtitle = this.date.toFormattedString(), // We use a helper for the date
+        subtitle = this.date.toFormattedString(),
         category = realCategory.name,
         amount = this.totalAmount,
         isExpense = isExpense
     )
 }
 
-// A helper function to make the date look nice, like "17:00 - Apr 24"
 private fun Date.toFormattedString(): String {
     val formatter = SimpleDateFormat("HH:mm - MMM dd", Locale.getDefault())
     return formatter.format(this)

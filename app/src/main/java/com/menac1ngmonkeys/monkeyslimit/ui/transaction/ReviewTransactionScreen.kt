@@ -107,22 +107,26 @@ fun ReviewTransactionScreenContent(
     var globalSelectedBudget by remember(budgets) { mutableStateOf(budgets.firstOrNull()) }
 
     // PERBAIKAN 3: Inisialisasi items dengan logika cerdas
-    // Jika detectedItems ada isinya, gunakan itu. Jika kosong, buat dummy default.
     var items by remember(categories, budgets) {
         mutableStateOf(
             if (categories.isNotEmpty() && budgets.isNotEmpty()) {
                 val defaultCatId = categories.first().id
                 val defaultBudgetId = budgets.first().id
 
-                // Gunakan default items hanya jika detectedItems kosong
                 if (detectedItems.isEmpty()) {
-                    listOf(
-                        ReviewItemUi(1, "Fish n Chips", defaultCatId, defaultBudgetId, 1, 55000.0),
-                        ReviewItemUi(2, "Ice Tea", defaultCatId, defaultBudgetId, 1, 15000.0)
-                    )
+//                    listOf(
+//                        ReviewItemUi(1, "Fish n Chips", defaultCatId, defaultBudgetId, 1, 55000.0),
+//                        ReviewItemUi(2, "Ice Tea", defaultCatId, defaultBudgetId, 1, 15000.0)
+//                    )
+                    emptyList<ReviewItemUi>()
                 } else {
-                    // Mapping detected items ke ID default agar tidak error (ID 0 dari VM diganti ID valid)
-                    detectedItems.map { it.copy(categoryId = defaultCatId, budgetId = defaultBudgetId) }
+                    // FIX: Preserve the AI Category ID if it found one (> 0), otherwise use Default
+                    detectedItems.map {
+                        it.copy(
+                            categoryId = if (it.categoryId != 0) it.categoryId else defaultCatId,
+                            budgetId = defaultBudgetId
+                        )
+                    }
                 }
             } else emptyList()
         )
@@ -143,7 +147,11 @@ fun ReviewTransactionScreenContent(
             val defaultCatId = categories.first().id
             val defaultBudgetId = budgets.first().id
             items = detectedItems.map {
-                it.copy(categoryId = defaultCatId, budgetId = defaultBudgetId)
+                // FIX: Preserve the AI Category ID if it found one (> 0), otherwise use Default
+                it.copy(
+                    categoryId = if (it.categoryId != 0) it.categoryId else defaultCatId,
+                    budgetId = defaultBudgetId
+                )
             }
         }
     }

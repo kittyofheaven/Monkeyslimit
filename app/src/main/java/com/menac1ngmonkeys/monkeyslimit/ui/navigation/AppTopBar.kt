@@ -86,10 +86,10 @@ fun getCurrentHour(): Int {
 fun getGreetingMessage(): String {
     val currentHour = getCurrentHour()
     return when (currentHour) {
-        in 0..11 -> "Good Morning"
-        in 12..15 -> "Good Afternoon"
-        in 16..18 -> "Good Evening"
-        else -> "Good Night"
+        in 0..11 -> "Good Morning!"
+        in 12..15 -> "Good Afternoon!"
+        in 16..18 -> "Good Evening!"
+        else -> "Good Night!"
     }
 }
 

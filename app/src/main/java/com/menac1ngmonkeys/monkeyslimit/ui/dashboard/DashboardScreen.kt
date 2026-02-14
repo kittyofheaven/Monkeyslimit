@@ -1,60 +1,119 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.dashboard
 
 import AppViewModelProvider
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
-import com.menac1ngmonkeys.monkeyslimit.ui.components.SavingsGoalCard
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardFilter
+import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardNotification
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
+import com.menac1ngmonkeys.monkeyslimit.ui.theme.lighten
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
 
-// This is our new "dumb" composable. It just displays UI.
-/**
- * Stateless dashboard UI; renders cards and lists from provided UI state.
- *
- * @param appUiState shared app-wide totals.
- * @param dashboardUiState dashboard-specific feed content.
- */
+@Composable
+fun DashboardScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    dashboardViewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    appViewModel: AppViewModel = viewModel(factory = AppViewModelProvider.Factory),
+) {
+    val dashboardUiState by dashboardViewModel.dashboardUiState.collectAsState()
+    val appUiState by appViewModel.appUiState.collectAsState()
+
+    DashboardScreenContent(
+        modifier = modifier,
+        appUiState = appUiState,
+        dashboardUiState = dashboardUiState,
+        onFilterSelected = dashboardViewModel::updateFilter,
+        onTransactionClick = { transactionId ->
+            navController.navigate("transaction_detail/$transactionId")
+        }
+    )
+}
+
 @Composable
 fun DashboardScreenContent(
     modifier: Modifier = Modifier,
-    appUiState: AppUiState, // UI for all of the screens
-    dashboardUiState: DashboardUiState, // It accepts the UI state directly
+    appUiState: AppUiState,
+    dashboardUiState: DashboardUiState,
     onFilterSelected: (DashboardFilter) -> Unit = {},
     onTransactionClick: (Int) -> Unit = {}
 ) {
-    val totalBalance = appUiState.totalBalance
     val totalExpense = appUiState.totalExpense
     val totalIncome = appUiState.totalIncome
+
+    // 1. Lock the dismissal state for the entire app session
+    var isNotificationDismissed by rememberSaveable { mutableStateOf(false) }
+
+    // 2. Cache the FIRST valid notification so it doesn't change when filters are clicked
+    var cachedNotification by remember { mutableStateOf<DashboardNotification?>(null) }
+
+    LaunchedEffect(dashboardUiState.notification) {
+        // Only save it if we haven't saved one yet AND it's a real notification
+        if (cachedNotification == null && dashboardUiState.notification !is DashboardNotification.None) {
+            cachedNotification = dashboardUiState.notification
+        }
+    }
+
+    // 3. Extract details using the CACHED notification (not the actively changing state)
+    val notif = cachedNotification ?: DashboardNotification.None
+
+    val (bgColor, iconColor, icon, title, message) = when (notif) {
+        is DashboardNotification.Alert -> NotificationStyle(
+            bgColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
+            iconColor = MaterialTheme.colorScheme.tertiary,
+            icon = Icons.Default.Warning,
+            title = notif.title,
+            message = notif.message
+        )
+        is DashboardNotification.Warning -> NotificationStyle(
+            bgColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
+            iconColor = MaterialTheme.colorScheme.tertiary,
+            icon = Icons.Default.Warning,
+            title = notif.title,
+            message = notif.message
+        )
+        is DashboardNotification.Achievement -> NotificationStyle(
+            bgColor = MaterialTheme.colorScheme.primaryContainer.lighten(0.2f),
+            iconColor = MaterialTheme.colorScheme.primary,
+            icon = Icons.Default.EmojiEvents,
+            title = notif.title,
+            message = notif.message
+        )
+        else -> NotificationStyle(Color.White, Color.Gray, Icons.Default.Done, "", "")
+    }
+
+    // 4. It's visible ONLY if it's not "None" AND the user hasn't dismissed it
+    val isNotificationVisible = notif !is DashboardNotification.None && !isNotificationDismissed
 
     Column(
         modifier = modifier
@@ -64,36 +123,54 @@ fun DashboardScreenContent(
         verticalArrangement = Arrangement.Top
     ) {
         BalanceExpenseCard(
-            totalBalance = totalBalance,
+            modifier = Modifier.padding(horizontal = 20.dp),
+            totalIncome = totalIncome,
             totalExpense = totalExpense,
         )
-        Spacer(Modifier.size(15.dp))
-        // Main Container -- START --
+        Spacer(Modifier.size(20.dp))
+
         MainContentContainer(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.primaryContainer
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Savings Box -- START
-                SavingsGoalCard(
-                    currentSavings = appUiState.totalBalance,
-                    savingsGoal = 50_000_000.0, // For now, we add it explicitly
-                    revenueLastWeek = appUiState.totalExpense,
-                    foodExpenseLastWeek = appUiState.totalExpense
-                )
-                // Savings Box -- END
+                // --- DYNAMIC NOTIFICATION CARD ---
+                AnimatedVisibility(
+                    visible = isNotificationVisible,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column {
+                        NotificationCard(
+                            backgroundColor = bgColor,
+                            iconColor = iconColor,
+                            icon = icon,
+                            title = title,
+                            message = message,
+                            onClose = {
+                                // Permanently dismiss for this session
+                                isNotificationDismissed = true
+                            }
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
+                }
+                // -----------------------------
 
-                Spacer(Modifier.size(15.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Today",
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = dashboardUiState.currentMonth,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
 
                     DashboardFilterRow(
@@ -101,38 +178,113 @@ fun DashboardScreenContent(
                         onFilterSelected = onFilterSelected
                     )
                 }
+
                 Spacer(Modifier.size(8.dp))
 
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    // Tell the LazyColumn to use the list from our ViewModel's state
                     items(dashboardUiState.recentTransactions) { transaction ->
                         TransactionRow(
                             transaction = transaction,
                             onClick = onTransactionClick,
                         )
                     }
-                    item { Spacer(Modifier.size(20.dp)) }
                 }
-
             }
         }
-        // Main Container -- END --
+    }
+}
+
+// Helper data class for style extraction
+data class NotificationStyle(
+    val bgColor: Color,
+    val iconColor: Color,
+    val icon: ImageVector,
+    val title: String,
+    val message: String
+)
+
+@Composable
+fun NotificationCard(
+    backgroundColor: Color,
+    iconColor: Color,
+    icon: ImageVector,
+    title: String,
+    message: String,
+    onClose: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.8f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onClose() },
+                        tint = Color.Gray
+                    )
+                }
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun DashboardFilterRow(
+    modifier: Modifier = Modifier,
     currentFilter: DashboardFilter,
     onFilterSelected: (DashboardFilter) -> Unit
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier
     ) {
         FilterChipItem(
             text = "All",
@@ -179,57 +331,3 @@ fun FilterChipItem(
         )
     )
 }
-
-// This is the "smart" composable that your app's navigation will use.
-/**
- * ViewModel-backed dashboard entry; collects state and delegates to stateless content.
- *
- * @param dashboardViewModel injected ViewModel supplying dashboard state.
- * @param appViewModel injected ViewModel supplying shared totals.
- */
-@Composable
-fun DashboardScreen(
-    modifier: Modifier = Modifier,
-    // Use the factory to create an instance of our ViewModel
-    dashboardViewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    appViewModel: AppViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    navController: androidx.navigation.NavController,
-) {
-    // Collect the state from the ViewModel. Every time the state changes,
-    // this Composable will automatically recompose with the new data.
-    val dashboardUiState by dashboardViewModel.dashboardUiState.collectAsState()
-    val appUiState by appViewModel.appUiState.collectAsState()
-
-
-    // Call our "dumb" UI composable and pass the real state to it
-    DashboardScreenContent(
-        modifier = modifier,
-        appUiState = appUiState,
-        dashboardUiState = dashboardUiState,
-        onFilterSelected = dashboardViewModel::updateFilter,
-        onTransactionClick = { transactionId ->
-            // Navigate to detail
-            navController.navigate("transaction_detail/$transactionId")
-        }
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    // 1. Create a fake state object with sample data.
-    val fakeDashboardUiState = DashboardUiState()
-
-    val fakeAppUiState = AppUiState(
-        totalBalance = 150.0,
-        totalExpense = 275.0
-    )
-
-    // 2. Call the stateless "Content" composable with the fake data.
-    //    No ViewModel is created, so there will be no crash.
-    DashboardScreenContent(
-        dashboardUiState = fakeDashboardUiState,
-        appUiState = fakeAppUiState
-    )
-}
-
