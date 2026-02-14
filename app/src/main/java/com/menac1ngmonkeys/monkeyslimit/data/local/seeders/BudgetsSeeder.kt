@@ -4,83 +4,25 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.dao.BudgetsDao
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
 
 object BudgetsSeeder {
-    suspend fun seed(budgetsDao: BudgetsDao): Map<String, Int> {
-        return if (budgetsDao.count() == 0) {
+    suspend fun seedForUser(budgetsDao: BudgetsDao, userId: String): Map<String, Int> {
+        // 1. Only seed if this specific user has 0 budgets in the database
+        return if (budgetsDao.countUserBudgets(userId) == 0) {
             val start = SeedUtils.firstDayOfCurrentMonth()
 
             val budgets = listOf(
-                // 1. Needs
-                Budgets(
-                    id = 0,
-                    name = "Needs (Food and Drinks)",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Essential daily expenses for sustenance."
-                ),
-
-                // 2. Education & Health
-                Budgets(
-                    id = 0,
-                    name = "Education and Health",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Medical bills, courses, books, and wellness."
-                ),
-
-                // 3. Transportation
-                Budgets(
-                    id = 0,
-                    name = "Transportation",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Commute costs, fuel, public transport, or vehicle maintenance."
-                ),
-
-                // 4. Wants
-                Budgets(
-                    id = 0,
-                    name = "Wants (Lifestyle)",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Non-essential spending like shopping, entertainment, and dining out."
-                ),
-
-                // 5. Bills & Housing
-                Budgets(
-                    id = 0,
-                    name = "Bills and Housing",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Rent/mortgage, utilities, internet, and phone bills."
-                ),
-
-                // 6. Investment & Donation
-                Budgets(
-                    id = 0,
-                    name = "Investment and Donation",
-                    amount = 0.0,
-                    limitAmount = 0.0,
-                    startDate = start,
-                    endDate = null,
-                    note = "Future savings, stocks, mutual funds, and charitable giving."
-                )
+                Budgets(0, "Needs (Food and Drinks)", 0.0, 0.0, start, null, "Essential daily expenses", userId = userId),
+                Budgets(0, "Education and Health", 0.0, 0.0, start, null, "Medical bills, courses", userId = userId),
+                Budgets(0, "Transportation", 0.0, 0.0, start, null, "Commute costs, fuel", userId = userId),
+                Budgets(0, "Wants (Lifestyle)", 0.0, 0.0, start, null, "Non-essential spending", userId = userId),
+                Budgets(0, "Bills and Housing", 0.0, 0.0, start, null, "Rent, utilities, internet", userId = userId),
+                Budgets(0, "Investment and Donation", 0.0, 0.0, start, null, "Future savings", userId = userId)
             )
 
-            // Insert all and return map of Name -> ID
+            // 2. Insert and return a mapping of Name to the newly generated ID
             budgets.associate { it.name to budgetsDao.insert(it).toInt() }
         } else {
-            // If already seeded, just return existing map
-            budgetsDao.getAllNow().associate { it.name to it.id }
+            // 3. FIX: Only fetch budgets belonging to this specific userId to avoid data leaks
+            budgetsDao.getAllNow(userId).associate { it.name to it.id }
         }
     }
 }

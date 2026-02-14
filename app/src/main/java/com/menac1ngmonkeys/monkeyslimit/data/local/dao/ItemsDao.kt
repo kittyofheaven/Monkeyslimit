@@ -17,21 +17,20 @@ interface ItemsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<Items>)
 
-    @Query("SELECT * FROM items")
-    fun getAllItems(): Flow<List<Items>>
+    @Query("SELECT * FROM items WHERE userId = :userId")
+    fun getAllItems(userId: String): Flow<List<Items>>
 
-    @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId")
-    suspend fun getItemsBySmartSplitNow(smartSplitId: Int): List<Items>
+    @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId AND userId = :userId")
+    suspend fun getItemsBySmartSplitNow(smartSplitId: Int, userId: String): List<Items>
 
-    // NEW: Flow version for reactive UI / ViewModel usage
-    @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId")
-    fun getItemsBySmartSplitId(smartSplitId: Int): Flow<List<Items>>
+    @Query("SELECT * FROM items WHERE smartSplitId = :smartSplitId AND userId = :userId")
+    fun getItemsBySmartSplitId(smartSplitId: Int, userId: String): Flow<List<Items>>
 
     @Query("SELECT COUNT(*) FROM items")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM items WHERE id = :id")
-    fun getItemById(id: Int): Flow<Items?>
+    @Query("SELECT * FROM items WHERE id = :id AND userId = :userId")
+    fun getItemById(id: Int, userId: String): Flow<Items?>
 
     @Update
     suspend fun update(items: Items)

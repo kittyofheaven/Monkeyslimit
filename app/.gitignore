@@ -1,1 +1,10 @@
 /build
+
+# Keystore / Signature files
+*.jks
+*.keystore
+
+# Build Outputs
+/app/release/*
+*.aab
+*.apk

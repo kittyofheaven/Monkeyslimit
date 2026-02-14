@@ -17,14 +17,14 @@ interface SmartSplitsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(smartSplits: List<SmartSplits>)
 
-    @Query("SELECT * FROM smartsplits")
-    fun getAllSmartSplits(): Flow<List<SmartSplits>>
+    @Query("SELECT * FROM smartsplits WHERE userId = :userId")
+    fun getAllSmartSplits(userId: String): Flow<List<SmartSplits>>
 
     @Query("SELECT COUNT(*) FROM smartsplits")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM smartsplits WHERE id = :id")
-    fun getSmartSplitById(id: Int): Flow<SmartSplits?>
+    @Query("SELECT * FROM smartsplits WHERE id = :id AND userId = :userId")
+    fun getSmartSplitById(id: Int, userId: String): Flow<SmartSplits?>
 
     @Update
     suspend fun update(smartSplits: SmartSplits)

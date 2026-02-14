@@ -24,5 +24,6 @@ data class Members(
     @ColumnInfo(name = "smartSplitId") val smartSplitId: Int? = null,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "contact") val contact: String? = null,
-    @ColumnInfo(name = "note") val note: String? = null
+    @ColumnInfo(name = "note") val note: String? = null,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

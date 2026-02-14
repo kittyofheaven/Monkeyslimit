@@ -109,8 +109,16 @@ fun BudgetDetailWithHeader(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
+                val displayName = uiState.budget?.name?.length?.let {
+                    if (it > 15) {
+                        "${uiState.budget?.name?.take(12)}..."
+                    } else {
+                        uiState.budget?.name
+                    }
+                }
+
                 Text(
-                    text = uiState.budget?.name ?: "Budget Detail",
+                    text = displayName ?: "Budget Detail",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )

@@ -17,26 +17,23 @@ interface MembersDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(members: List<Members>)
 
-    @Query("SELECT * FROM members")
-    fun getAllMembers(): Flow<List<Members>>
+    @Query("SELECT * FROM members WHERE userId = :userId")
+    fun getAllMembers(userId: String): Flow<List<Members>>
 
-    @Query("SELECT * FROM members WHERE smartSplitId = :smartSplitId")
-    suspend fun getMembersBySmartSplitNow(smartSplitId: Int): List<Members>
+    @Query("SELECT * FROM members WHERE smartSplitId = :smartSplitId AND userId = :userId")
+    suspend fun getMembersBySmartSplitNow(smartSplitId: Int, userId: String): List<Members>
 
     @Query("SELECT COUNT(*) FROM members")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM members WHERE id = :id")
-    fun getMemberById(id: Int): Flow<Members?>
+    @Query("SELECT * FROM members WHERE id = :id AND userId = :userId")
+    fun getMemberById(id: Int, userId: String): Flow<Members?>
 
-    // 1. Fetch only Global Contacts (for Selection Screen)
-    @Query("SELECT * FROM members WHERE smartSplitId IS NULL ORDER BY name ASC")
-    fun getAllGlobalContacts(): Flow<List<Members>>
+    @Query("SELECT * FROM members WHERE smartSplitId IS NULL AND userId = :userId ORDER BY name ASC")
+    fun getAllGlobalContacts(userId: String): Flow<List<Members>>
 
-    // 2. Fetch Members belonging to a specific Bill (for History/Result)
-    @Query("SELECT * FROM members WHERE smartSplitId = :splitId")
-    fun getMembersBySplitId(splitId: Int): Flow<List<Members>>
-
+    @Query("SELECT * FROM members WHERE smartSplitId = :splitId AND userId = :userId")
+    fun getMembersBySplitId(splitId: Int, userId: String): Flow<List<Members>>
 
     @Update
     suspend fun update(members: Members)

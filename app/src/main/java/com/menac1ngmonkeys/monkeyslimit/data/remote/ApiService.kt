@@ -1,5 +1,6 @@
 package com.menac1ngmonkeys.monkeyslimit.data.remote
 
+import androidx.annotation.Keep
 import com.menac1ngmonkeys.monkeyslimit.data.remote.response.ClassifyRequest
 import com.menac1ngmonkeys.monkeyslimit.data.remote.response.ClassifyResponse
 import com.menac1ngmonkeys.monkeyslimit.data.remote.response.HealthResponse
@@ -12,6 +13,7 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 
+@Keep
 interface ApiService {
     @GET("health")
     suspend fun getHealth(): Response<HealthResponse>

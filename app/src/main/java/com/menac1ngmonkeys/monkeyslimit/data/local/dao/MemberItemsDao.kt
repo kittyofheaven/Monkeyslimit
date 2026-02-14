@@ -16,11 +16,11 @@ interface MemberItemsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(memberItems: List<MemberItems>)
 
-    @Query("SELECT * FROM memberitems")
-    fun getAllMemberItems(): Flow<List<MemberItems>>
+    @Query("SELECT * FROM memberitems WHERE userId = :userId")
+    fun getAllMemberItems(userId: String): Flow<List<MemberItems>>
 
-    @Query("SELECT * FROM memberitems WHERE memberId = :memberId")
-    fun getMemberItemsByMemberId(memberId: Int): Flow<List<MemberItems>>
+    @Query("SELECT * FROM memberitems WHERE memberId = :memberId AND userId = :userId")
+    fun getMemberItemsByMemberId(memberId: Int, userId: String): Flow<List<MemberItems>>
 
     @Query("SELECT COUNT(*) FROM memberitems")
     suspend fun count(): Int

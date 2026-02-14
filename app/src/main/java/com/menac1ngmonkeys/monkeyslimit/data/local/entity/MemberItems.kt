@@ -31,5 +31,6 @@ data class MemberItems(
     @ColumnInfo(name = "memberId") val memberId: Int,
     @ColumnInfo(name = "itemId") val itemId: Int,
     @ColumnInfo(name = "price") val price: Double,
-    @ColumnInfo(name = "quantity") val quantity: Int
+    @ColumnInfo(name = "quantity") val quantity: Int,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

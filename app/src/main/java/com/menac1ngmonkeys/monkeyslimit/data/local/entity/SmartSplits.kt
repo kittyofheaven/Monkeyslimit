@@ -19,5 +19,7 @@ data class SmartSplits(
     @ColumnInfo(name = "others") val others: Double = 0.0,
 
     @ColumnInfo(name = "isPaid") val isPaid: Boolean = false,
-    @ColumnInfo(name = "createdDate") val createDate: Date
+    @ColumnInfo(name = "createdDate") val createDate: Date,
+
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

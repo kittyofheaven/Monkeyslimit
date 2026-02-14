@@ -15,5 +15,6 @@ data class Budgets(
     @ColumnInfo(name = "limitAmount") val limitAmount: Double,
     @ColumnInfo(name = "startDate") val startDate: Date,
     @ColumnInfo(name = "endDate") val endDate: Date?,
-    @ColumnInfo(name = "note") val note: String?
+    @ColumnInfo(name = "note") val note: String?,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

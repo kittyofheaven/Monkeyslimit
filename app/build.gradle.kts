@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,7 +10,35 @@ plugins {
     id("kotlin-parcelize")
 }
 
+// Read local.properties
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(FileInputStream(localPropertiesFile))
+    }
+}
+
 android {
+    signingConfigs {
+        create("release") {
+            val storeFilePath = localProperties.getProperty("RELEASE_STORE_FILE")
+
+            // This logic handles the path safely even with spaces
+            if (!storeFilePath.isNullOrEmpty()) {
+                val keystoreFile = file(storeFilePath)
+                if (keystoreFile.exists()) {
+                    storeFile = keystoreFile
+                } else {
+                    // This will print a helpful message in the Build log if it still fails
+                    println("Keystore Debug: File not found at $storeFilePath")
+                }
+            }
+
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
     namespace = "com.menac1ngmonkeys.monkeyslimit"
     compileSdk {
         version = release(36)
@@ -25,11 +56,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

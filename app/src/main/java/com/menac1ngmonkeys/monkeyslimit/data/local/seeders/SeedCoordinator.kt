@@ -5,9 +5,11 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
 object SeedCoordinator {
     /**
      * Core seeds that every user must get (production-safe).
-     * Keep minimal, deterministic, and idempotent. Currently: Categories only.
+     * Keep minimal, deterministic, and idempotent.
+     * Now includes Categories AND Budgets.
      */
     suspend fun seedCore(db: AppDatabase) {
+        // 1. Seed Core Categories
         val categoriesDao = db.categoriesDao()
         if (categoriesDao.count() == 0) {
             CategoriesSeeder.seed(categoriesDao)
@@ -16,15 +18,20 @@ object SeedCoordinator {
 
     /**
      * Development-only seeds with realistic data across tables.
-     * Caller should guard with BuildConfig.DEBUG.
+     * DISABLED FOR PRODUCTION LAUNCH.
      */
     suspend fun seedDev(db: AppDatabase) {
-        // Ensure Categories exist and build a mapping
+        // Ensure Core data (Categories & Budgets) exists
         seedCore(db)
-        val categoriesByName = db.categoriesDao().getAllNow().associate { it.name to it.id }
 
-        // Budgets (mapping by name)
-        val budgetsByName = BudgetsSeeder.seed(db.budgetsDao())
+        // ====================================================================
+        // DISABLED SEEDERS FOR PRODUCTION
+        // Uncomment these if you ever need to test with dummy data again
+        // ====================================================================
+
+        /*
+        val categoriesByName = db.categoriesDao().getAllNow().associate { it.name to it.id }
+        val budgetsByName = db.budgetsDao().getAllNow().associate { it.name to it.id }
 
         // Transactions
         TransactionsSeeder.seed(db.transactionsDao(), budgetsByName, categoriesByName)
@@ -41,7 +48,6 @@ object SeedCoordinator {
 
         // Notifications
         NotificationsSeeder.seed(db.notificationsDao())
+        */
     }
-
-    // Debug gating handled by callers (e.g., MainActivity)
 }

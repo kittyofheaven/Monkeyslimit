@@ -5,17 +5,31 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# 1. Preserve Generic Signatures & Annotations (Crucial for ParameterizedType errors)
+# Added RuntimeVisibleParameterAnnotations which is required for Retrofit suspend functions
+-keepattributes Signature, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations, AnnotationDefault, EnclosingMethod, InnerClasses
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 2. Keep the entire data packages (Room entities & API responses)
+-keep class com.menac1ngmonkeys.monkeyslimit.data.local.entity.** { *; }
+-keep class com.menac1ngmonkeys.monkeyslimit.data.remote.response.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# 3. Protect your API Service Interface
+-keep interface com.menac1ngmonkeys.monkeyslimit.data.remote.** { *; }
+# Explicitly keep methods with Retrofit annotations to prevent signature stripping
+-keepclassmembers interface * {
+    @retrofit2.http.* <methods>;
+}
+
+# 4. Standard Retrofit & OkHttp Protections
+-keep class retrofit2.** { *; }
+-keep class okhttp3.** { *; }
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+
+# 5. Prevent GSON from scrambling field names used in JSON
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# 6. Kotlin Coroutines specific rules
+-keep class kotlin.coroutines.Continuation

@@ -18,30 +18,33 @@ interface TransactionsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(transactions: List<Transactions>)
 
-    @Query("SELECT * FROM transactions")
-    fun getAllTransactions(): Flow<List<Transactions>>
+    // Filter by userId
+    @Query("SELECT * FROM transactions WHERE userId = :userId ORDER BY date DESC")
+    fun getAllTransactions(userId: String): Flow<List<Transactions>>
 
-    // Get specific type
-    @Query("SELECT * FROM transactions WHERE type = :type ORDER BY date DESC")
-    fun getTransactionsByType(type: TransactionType): Flow<List<Transactions>>
+    // Get specific type, filtered by userId
+    @Query("SELECT * FROM transactions WHERE type = :type AND userId = :userId ORDER BY date DESC")
+    fun getTransactionsByType(type: TransactionType, userId: String): Flow<List<Transactions>>
 
-    // Calculate Total Income
-    @Query("SELECT SUM(totalAmount) FROM transactions WHERE type = 'INCOME'")
-    fun getTotalIncome(): Flow<Double?>
+    // Calculate Total Income for the specific user
+    @Query("SELECT SUM(totalAmount) FROM transactions WHERE type = 'INCOME' AND userId = :userId")
+    fun getTotalIncome(userId: String): Flow<Double?>
 
-    // Calculate Total Expense
-    @Query("SELECT SUM(totalAmount) FROM transactions WHERE type = 'EXPENSE'")
-    fun getTotalExpense(): Flow<Double?>
+    // Calculate Total Expense for the specific user
+    @Query("SELECT SUM(totalAmount) FROM transactions WHERE type = 'EXPENSE' AND userId = :userId")
+    fun getTotalExpense(userId: String): Flow<Double?>
 
+    // Global count (safe to leave as is)
     @Query("SELECT COUNT(*) FROM transactions")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM transactions WHERE id = :id")
-    fun getTransactionById(id: Int): Flow<Transactions?>
+    // Added userId to prevent fetching other users' transactions
+    @Query("SELECT * FROM transactions WHERE id = :id AND userId = :userId")
+    fun getTransactionById(id: Int, userId: String): Flow<Transactions?>
 
-    // Get all transactions for a specific budget
-    @Query("SELECT * FROM transactions WHERE budgetId = :budgetId ORDER BY date DESC")
-    fun getTransactionsByBudgetId(budgetId: Int): Flow<List<Transactions>>
+    // Get all transactions for a specific budget, filtered by userId
+    @Query("SELECT * FROM transactions WHERE budgetId = :budgetId AND userId = :userId ORDER BY date DESC")
+    fun getTransactionsByBudgetId(budgetId: Int, userId: String): Flow<List<Transactions>>
 
     @Update
     suspend fun update(transactions: Transactions)
