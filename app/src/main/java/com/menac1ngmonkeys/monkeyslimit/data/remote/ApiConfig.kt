@@ -14,9 +14,15 @@ object ApiConfig {
 
         val client = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(120, TimeUnit.SECONDS) // OCR might take time
-            .readTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(120, TimeUnit.SECONDS)
+            // 1. Connection Timeout: Time to find the server
+            .connectTimeout(15, TimeUnit.SECONDS)
+
+            // 2. Read Timeout: Time to wait for the AI to finish processing
+            // Since Donut OCR is heavy, 60s is a safe "maximum"
+            .readTimeout(180, TimeUnit.SECONDS)
+
+            // 3. Write Timeout: Time to upload your image
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 
         val retrofit = Retrofit.Builder()

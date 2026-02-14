@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import com.menac1ngmonkeys.monkeyslimit.R
+import com.menac1ngmonkeys.monkeyslimit.ui.theme.lighten
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 import java.util.Locale
 
@@ -63,10 +65,10 @@ fun BalanceExpenseCard(
             BalExpSingular(
                 BalExpData.Income(amount = totalIncome)
             )
-            VerticalDivider(
-                color = Color(0xFFDFF7E2),
-                thickness = 1.5f.dp,
-            )
+//            VerticalDivider(
+//                color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.8f),
+//                thickness = 1.5f.dp,
+//            )
             BalExpSingular(
                 BalExpData.Expense(amount = totalExpense)
             )

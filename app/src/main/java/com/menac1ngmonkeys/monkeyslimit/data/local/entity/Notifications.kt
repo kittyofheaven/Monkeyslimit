@@ -11,5 +11,6 @@ data class Notifications(
     @ColumnInfo(name = "title") val title: String,
     @ColumnInfo(name = "description") val description: String?,
     @ColumnInfo(name = "date") val date: Date,
-    @ColumnInfo(name = "isCompleted") val isCompleted: Boolean = false
+    @ColumnInfo(name = "isCompleted") val isCompleted: Boolean = false,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

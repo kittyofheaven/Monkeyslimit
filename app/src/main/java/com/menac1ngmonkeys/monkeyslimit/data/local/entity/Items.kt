@@ -20,5 +20,6 @@ data class Items(
     @ColumnInfo(name = "smartSplitId") val smartSplitId: Int,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "quantity") val quantity: Int,
-    @ColumnInfo(name = "totalPrice") val totalPrice: Double
+    @ColumnInfo(name = "totalPrice") val totalPrice: Double,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

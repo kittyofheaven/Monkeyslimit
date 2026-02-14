@@ -181,18 +181,40 @@ fun DashboardScreenContent(
 
                 Spacer(Modifier.size(8.dp))
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                    items(dashboardUiState.recentTransactions) { transaction ->
-                        TransactionRow(
-                            transaction = transaction,
-                            onClick = onTransactionClick,
+                if (dashboardUiState.recentTransactions.isEmpty()) {
+                    // Determine the specific message based on the active filter
+                    val emptyMessage = when (dashboardUiState.currentFilter) {
+                        DashboardFilter.INCOME -> "No income yet."
+                        DashboardFilter.EXPENSE -> "No expenses yet."
+                        else -> "No transactions yet."
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f), // Take up remaining space
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = emptyMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(dashboardUiState.recentTransactions) { transaction ->
+                            TransactionRow(
+                                transaction = transaction,
+                                onClick = onTransactionClick,
+                            )
+                        }
                     }
                 }
             }

@@ -24,7 +24,7 @@ object ItemsSeeder {
             result
         } else {
             splitIds.forEach { splitId ->
-                val list = itemsDao.getItemsBySmartSplitNow(splitId)
+                val list = itemsDao.getItemsBySmartSplitNow(splitId, "")
                 result[splitId] = list.associate { it.name to it.id }
             }
             result

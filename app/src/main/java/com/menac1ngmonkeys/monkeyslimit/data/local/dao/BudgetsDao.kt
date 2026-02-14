@@ -17,15 +17,23 @@ interface BudgetsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(budgets: List<Budgets>)
 
-    @Query("SELECT * FROM budgets")
-    fun getAllBudgets(): Flow<List<Budgets>>
+    // Filter by userId
+    @Query("SELECT * FROM budgets WHERE userId = :userId")
+    fun getAllBudgets(userId: String): Flow<List<Budgets>>
 
-    @Query("SELECT * FROM budgets")
-    suspend fun getAllNow(): List<Budgets>
+    // Filter by userId
+    @Query("SELECT COUNT(*) FROM budgets WHERE userId = :userId")
+    suspend fun countUserBudgets(userId: String): Int
 
-    @Query("SELECT * FROM budgets WHERE id = :id")
-    fun getBudgetById(id: Int): Flow<Budgets?>
+    // Filter by userId
+    @Query("SELECT * FROM budgets WHERE userId = :userId")
+    suspend fun getAllNow(userId: String): List<Budgets>
 
+    // Added userId to ensure users cannot fetch other users' budgets
+    @Query("SELECT * FROM budgets WHERE id = :id AND userId = :userId")
+    fun getBudgetById(id: Int, userId: String): Flow<Budgets?>
+
+    // Global count (safe to leave as is for debug/system purposes)
     @Query("SELECT COUNT(*) FROM budgets")
     suspend fun count(): Int
 

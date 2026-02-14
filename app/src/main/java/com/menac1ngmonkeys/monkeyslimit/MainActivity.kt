@@ -44,6 +44,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFro
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
+import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.BudgetsSeeder
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
@@ -169,6 +170,11 @@ fun AuthGatekeeper(
     LaunchedEffect(authUiState.currentUser) {
         if (authUiState.currentUser != null) {
             authViewModel.startRealtimeSync()
+
+            // --- NEW: Seed user-specific budgets upon successful login ---
+            val db = AppDatabase.getDatabase(context)
+            val uid = authUiState.currentUser!!.uid
+            BudgetsSeeder.seedForUser(db.budgetsDao(), uid)
         }
     }
 

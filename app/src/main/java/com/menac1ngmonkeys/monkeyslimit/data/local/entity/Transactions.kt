@@ -38,5 +38,6 @@ data class Transactions(
     @ColumnInfo(name = "imagePath") val imagePath: String?,
     @ColumnInfo(name = "budgetId") val budgetId: Int?,
     @ColumnInfo(name = "categoryId") val categoryId: Int,
-    @ColumnInfo(name = "type") val type: TransactionType = TransactionType.EXPENSE
+    @ColumnInfo(name = "type") val type: TransactionType = TransactionType.EXPENSE,
+    @ColumnInfo(name = "userId") val userId: String = ""
 )

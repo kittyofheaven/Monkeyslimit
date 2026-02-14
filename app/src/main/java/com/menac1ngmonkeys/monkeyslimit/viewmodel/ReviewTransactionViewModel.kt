@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -118,23 +119,33 @@ class ReviewTransactionViewModel(
 
     fun parseReceiptData(context: Context, text: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
             _isAnalyzing.update { true }
             Log.d("ReviewViewModel", "=== Starting Smart OCR Analysis ===")
+            Log.d("ReviewViewModel", "OCR Text: ${text.take(50)}...")
 
             val decodedText = try { URLDecoder.decode(text, "UTF-8") } catch (e: Exception) { text.replace("+", " ") }
 
             // 1. EXTRACT DATE & TIME (Keep existing reliable logic)
+            Log.d("ReviewViewModel", "Searching for Date/Time...")
+            val dateStart = System.currentTimeMillis()
             extractDateAndTime(decodedText)
+            Log.d("ReviewViewModel", "Date Detection took: ${System.currentTimeMillis() - dateStart}ms")
+            Log.d("ReviewViewModel", "Date Detection Finished: ${_detectedDate.value}")
 
             // 2. DOCUMENT CLASSIFICATION (Transfer vs Store Receipt)
             val isTransfer = isDigitalTransfer(decodedText)
 
             if (isTransfer) {
                 Log.d("ReviewViewModel", "Document Type: DIGITAL TRANSFER / E-WALLET")
+                val transferStart = System.currentTimeMillis()
                 processDigitalTransfer(decodedText)
+                Log.d("ReviewViewModel", "Transfer Processing took: ${System.currentTimeMillis() - transferStart}ms")
             } else {
                 Log.d("ReviewViewModel", "Document Type: STORE RECEIPT")
+                val donutStart = System.currentTimeMillis()
                 val success = processStoreReceiptWithDonut(context, decodedText)
+                Log.d("ReviewViewModel", "Donut/Fallback took: ${System.currentTimeMillis() - donutStart}ms")
 
                 // Fallback to max amount if Donut model fails
                 if (!success) {
@@ -142,6 +153,10 @@ class ReviewTransactionViewModel(
                 }
             }
 
+            Log.d("ReviewViewModel", "ANALYSIS COMPLETE. Items detected: ${_detectedItems.value.size}")
+
+            val totalTime = System.currentTimeMillis() - startTime
+            Log.d("ReviewViewModel", "TOTAL ANALYSIS TIME: ${totalTime}ms (${totalTime / 1000}s)")
             _isAnalyzing.update { false }
         }
     }
@@ -261,16 +276,20 @@ class ReviewTransactionViewModel(
         var categoryId = 0
         try {
             val req = ClassifyRequest(text = merchantName)
-            val res = ApiConfig.getApiService().classifyText(req)
+            val res = withTimeout(5000) {
+                ApiConfig.getApiService().classifyText(req)
+            }
             if (res.isSuccessful && res.body()?.ok == true) {
                 val catName = res.body()?.data?.prediction ?: ""
                 val allCategories = categoriesRepository.getAllCategories().first()
                 categoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?: 0
             }
         } catch (e: Exception) {
-            Log.w("ReviewViewModel", "Classification failed for transfer", e)
+            Log.w("ReviewViewModel", "Classification skipped or timed out. Using default category.")
+            categoryId = 1 // Default to 'Uncategorized' or 'Needs'
         }
 
+        Log.d("ReviewViewModel", "Transfer Result: Name='$merchantName', Amount=$maxAmount, CatID=$categoryId")
         val newItem = ReviewItemUi(1, merchantName, categoryId, 0, 1, maxAmount)
         _detectedItems.update { listOf(newItem) }
     }
@@ -298,6 +317,7 @@ class ReviewTransactionViewModel(
 
             if (response.isSuccessful && response.body()?.ok == true) {
                 val menu = response.body()?.data?.menu ?: emptyList()
+                Log.d("ReviewViewModel", "API RESPONSE: Received ${menu.size} items from Donut.")
 
                 if (menu.isNotEmpty()) {
                     val allCategories = categoriesRepository.getAllCategories().first()
@@ -305,6 +325,7 @@ class ReviewTransactionViewModel(
                     val newItems = coroutineScope {
                         menu.mapIndexed { index, ocrItem ->
                             async {
+                                Log.d("ReviewViewModel", "Classifying Item [${index+1}]: ${ocrItem.nm}")
                                 var matchedCategoryId = 0
                                 try {
                                     val req = ClassifyRequest(text = ocrItem.nm)
@@ -312,8 +333,11 @@ class ReviewTransactionViewModel(
                                     if (res.isSuccessful && res.body()?.ok == true) {
                                         val catName = res.body()?.data?.prediction ?: ""
                                         matchedCategoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?: 0
+                                        Log.d("ReviewViewModel", "   ↳ Match: $catName (ID: $matchedCategoryId)")
                                     }
-                                } catch (e: Exception) { }
+                                } catch (e: Exception) {
+                                    Log.e("ReviewViewModel", "   ❌ Classification error for ${ocrItem.nm}")
+                                }
 
                                 ReviewItemUi(index + 1, ocrItem.nm, matchedCategoryId, 0, ocrItem.qty, ocrItem.price_int / ocrItem.qty)
                             }
@@ -321,9 +345,16 @@ class ReviewTransactionViewModel(
                     }
 
                     _detectedItems.update { newItems }
+                    Log.d("ReviewViewModel", "Donut Processing Finished Successfully.")
                     true
-                } else false
-            } else false
+                } else {
+                    Log.w("ReviewViewModel", "API RESPONSE: OK but 'menu' was empty.")
+                    false
+                }
+            } else {
+                Log.e("ReviewViewModel", "API ERROR: ${response.code()} - ${response.message()}")
+                false
+            }
         } catch (e: Exception) {
             Log.e("ReviewViewModel", "Donut OCR Failed", e)
             false
@@ -349,8 +380,11 @@ class ReviewTransactionViewModel(
         }
 
         if (maxAmount > 0) {
+            Log.d("ReviewViewModel", "Fallback Found Amount: $maxAmount")
             val newItem = ReviewItemUi(1, "Scanned Receipt", 0, 0, 1, maxAmount)
             _detectedItems.update { listOf(newItem) }
+        } else {
+            Log.w("ReviewViewModel", "Fallback found nothing.")
         }
     }
 
