@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,8 +77,27 @@ class AuthViewModel(
                     if (snapshot != null && snapshot.exists()) {
                         // CASE 1: Cloud Data Exists -> Normal Sync
                         val remoteUser = snapshot.toObject(User::class.java)
-                        remoteUser?.let {
-                            usersRepository.saveUser(it.copy(isSynced = true))
+
+                        // Explicitly grab the marriage status to ensure it's captured
+                        val cloudIsMarried = snapshot.getBoolean("isMarried") ?: false
+
+                        remoteUser?.let { incomingUser ->
+                            // 1. Check what we currently have in Room
+                            val localUser = usersRepository.getUser(uid).firstOrNull()
+
+                            // 2. Check if the local photo is a custom file path (starts with "/")
+                            val localPhoto = localUser?.photoUrl
+                            val isLocalCustomPhoto = localPhoto?.startsWith("/") == true
+
+                            // 3. Preserve the local path if it exists
+                            val userToSave = incomingUser.copy(
+                                isSynced = true,
+                                isMarried = cloudIsMarried,
+                                photoUrl = if (isLocalCustomPhoto) localPhoto else incomingUser.photoUrl
+                            )
+
+                            // 4. Save the merged data to Room
+                            usersRepository.saveUser(userToSave)
                         }
                     } else {
                         // CASE 2: Cloud is Empty (New User OR Deleted)
