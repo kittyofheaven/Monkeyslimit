@@ -9,8 +9,10 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.AnalyticsViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetDetailViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetRecommendationViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
+import com.menac1ngmonkeys.monkeyslimit.viewmodel.EditProfileViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ManualTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewSmartSplitViewModel
@@ -45,7 +47,8 @@ object AppViewModelProvider {
             DashboardViewModel(
                 transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
                 categoriesRepository = monkeysLimitApplication().container.categoriesRepository,
-                budgetsRepository = monkeysLimitApplication().container.budgetsRepository
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository,
+                monkeysLimitApplication().container.usersRepository
             )
         }
         // Initializer for AppViewModel
@@ -75,6 +78,12 @@ object AppViewModelProvider {
             ProfileViewModel(
                 usersRepository = monkeysLimitApplication().container.usersRepository
             ) // It has no dependencies for now
+        }
+        // Initializer for EditProfileViewModel
+        initializer {
+            EditProfileViewModel(
+                monkeysLimitApplication().container.usersRepository
+            )
         }
         // Initializer for ScanTransactionViewModel
         initializer {
@@ -124,6 +133,13 @@ object AppViewModelProvider {
         // Initializer for SmartSplitViewModel
         initializer {
             SmartSplitViewModel()
+        }
+        // Initializer for BudgetRecommendationViewModel
+        initializer {
+            BudgetRecommendationViewModel(
+                usersRepository = monkeysLimitApplication().container.usersRepository,
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository
+            )
         }
         // You'll add initializers for other ViewModels here in the future
     }

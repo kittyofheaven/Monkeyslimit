@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.util.Calendar
+import java.util.Date
 
 /**
  * Aggregates cross-screen app metrics (balance, expense) from budgets and transactions.
@@ -30,13 +32,36 @@ class AppViewModel(
             flow2 = budgetsRepository.getAllBudgets()
         )
         { transactions, budgets ->
-            val totalExpense = transactions.sumOf { tx ->
+            // 1. Get Current Month & Year
+            val calendar = Calendar.getInstance()
+            val currentMonth = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
+
+            // Helper to check if a date is in the current month
+            fun isCurrentMonth(date: Date): Boolean {
+                val itemCal = Calendar.getInstance()
+                itemCal.time = date
+                return itemCal.get(Calendar.MONTH) == currentMonth &&
+                        itemCal.get(Calendar.YEAR) == currentYear
+            }
+
+            // 2. Filter Transactions for Current Month
+            val filteredTransactions = transactions.filter { isCurrentMonth(it.date) }
+
+            // 3. Filter Budgets for Current Month (based on startDate)
+            val filteredBudgets = budgets.filter { isCurrentMonth(it.startDate) }
+
+            // 4. Calculate Totals based on Filtered Data
+            val totalExpense = filteredTransactions.sumOf { tx ->
                 if (tx.type == TransactionType.EXPENSE) tx.totalAmount else 0.0
             }
-            val totalIncome = transactions.sumOf { tx ->
+
+            val totalIncome = filteredTransactions.sumOf { tx ->
                 if (tx.type == TransactionType.INCOME) tx.totalAmount else 0.0
             }
-            val totalBalance = budgets.sumOf { it.amount }
+
+            // Note: This sums the 'amount' (spent) of budgets started this month.
+            val totalBalance = filteredBudgets.sumOf { it.amount }
 
             AppUiState(
                 totalExpense = totalExpense,

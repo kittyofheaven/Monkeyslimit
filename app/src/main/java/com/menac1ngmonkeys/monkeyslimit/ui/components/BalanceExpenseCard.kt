@@ -6,14 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -22,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
@@ -34,24 +30,29 @@ import java.util.Locale
 @Composable
 fun BalanceExpenseCard(
     modifier: Modifier = Modifier,
-    totalBalance: Double,
+    // Removed 'totalBalance' as it is no longer used for the calculation
+    totalIncome: Double,
     totalExpense: Double
 ) {
     val indonesianLocale = Locale.Builder()
-        .setLanguage("in")  // "in" is the code for Indonesian
-        .setRegion("ID")    // "ID" is the code for Indonesia
+        .setLanguage("in")
+        .setRegion("ID")
         .build()
+
+    // Logic updated: Calculate ratio based on Income instead of Balance
     var balanceExpenseRatio = 0f
-    if (totalBalance != 0.0 && totalExpense != 0.0) {
-        balanceExpenseRatio = (totalExpense / totalBalance).toFloat()
+    if (totalIncome != 0.0) {
+        balanceExpenseRatio = (totalExpense / totalIncome).toFloat()
     }
-    val balanceExpensePercentage = String.format(indonesianLocale,"%.2f%%", balanceExpenseRatio * 100f)
+
+    val balanceExpensePercentage = String.format(indonesianLocale, "%.2f%%", balanceExpenseRatio * 100f)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
     ) {
-        // Total Balance & Expenses Section
+        // Total Income & Expenses Section
         Row(
             modifier = Modifier
                 .height(55.dp)
@@ -60,62 +61,63 @@ fun BalanceExpenseCard(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             BalExpSingular(
-                BalExpData.Balance(amount = totalBalance)
+                BalExpData.Income(amount = totalIncome)
             )
             VerticalDivider(
-                color = Color(0xFFDFF7E2), // LightGreen100
+                color = Color(0xFFDFF7E2),
                 thickness = 1.5f.dp,
             )
             BalExpSingular(
                 BalExpData.Expense(amount = totalExpense)
             )
         }
-        Spacer(
-            modifier = Modifier
-                .size(20.dp)
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(25.dp)
-                .clip(
-                    shape = RoundedCornerShape(50)
-                )
-                .background(Color(0xFF444444))
-        ) {
-            BalanceExpenseBar(
-                balanceExpenseRatio = balanceExpenseRatio,
-                balanceExpensePercentage = balanceExpensePercentage,
-                totalBalance = totalBalance.toRupiahFormat(),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        Spacer(
-            modifier = Modifier
-                .size(10.dp)
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(
-                    id = R.drawable.select_check_box_24px
-                ),
-                contentDescription = "Check Box",
-                tint = Color.Unspecified
-            )
-            Spacer(Modifier.size(5.dp))
-            Text(
-                text = "$balanceExpensePercentage Of Total Balance, Looks Good.",
-                fontSize = TextUnit(
-                    value = 12f,
-                    type = TextUnitType.Sp
-                )
-            )
-        }
+//        Spacer(modifier = Modifier.size(20.dp))
+//        // Progress Bar
+//        Box(
+//            modifier = Modifier
+//                .fillMaxWidth(0.9f)
+//                .height(25.dp)
+//                .clip(
+//                    shape = RoundedCornerShape(50)
+//                )
+//                .background(Color(0xFF444444))
+//        ) {
+//            BalanceExpenseBar(
+//                balanceExpenseRatio = balanceExpenseRatio,
+//                balanceExpensePercentage = balanceExpensePercentage,
+//                // We pass Income here so the bar shows "Expense / Income"
+//                totalBalance = totalIncome.toRupiahFormat(),
+//                modifier = Modifier.fillMaxWidth()
+//            )
+//        }
+//        Spacer(
+//            modifier = Modifier
+//                .size(10.dp)
+//        )
+//        // Footer Text
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth(),
+//            horizontalArrangement = Arrangement.Center,
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Icon(
+//                painter = painterResource(
+//                    id = R.drawable.select_check_box_24px
+//                ),
+//                contentDescription = "Check Box",
+//                tint = Color.Unspecified
+//            )
+//            Spacer(Modifier.size(5.dp))
+//            // Text updated to reflect the logic change
+//            Text(
+//                text = "$balanceExpensePercentage Of Total Income, Looks Good.",
+//                fontSize = TextUnit(
+//                    value = 12f,
+//                    type = TextUnitType.Sp
+//                )
+//            )
+//        }
     }
 }
 
@@ -123,7 +125,7 @@ fun BalanceExpenseCard(
 @Composable
 private fun BalanceExpenseCardPreview() {
     BalanceExpenseCard(
-        totalBalance = 123456.789,
         totalExpense = 987654.321,
+        totalIncome = 5000000.0,
     )
 }

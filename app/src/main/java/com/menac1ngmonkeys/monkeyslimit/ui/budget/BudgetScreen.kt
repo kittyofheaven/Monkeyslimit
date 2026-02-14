@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
+import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.BudgetUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.state.SortDirection
 import com.menac1ngmonkeys.monkeyslimit.ui.state.SortType
@@ -108,6 +109,9 @@ fun BudgetScreen(
             },
             onAddBudgetClick = {
                 navController.navigate("add_budget")
+            },
+            onAiRecommendationClick = {
+                navController.navigate(NavItem.BudgetRecommendation.route)
             }
         )
 
@@ -172,13 +176,14 @@ private fun BudgetDetailWrapper(
 
 @Composable
 fun BudgetListScreenContent(
+    modifier: Modifier = Modifier,
     uiState: BudgetUiState,
     onMonthSelected: (Int) -> Unit,
     onYearChanged: (Int) -> Unit,
     onSortChange: (SortType, SortDirection) -> Unit,
     onBudgetClick: (Int) -> Unit,
     onAddBudgetClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onAiRecommendationClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -205,7 +210,7 @@ fun BudgetListScreenContent(
         Spacer(modifier = Modifier.height(12.dp))
 
         // 3. Action Buttons
-        ActionButtons(onAddBudgetClick)
+        ActionButtons(onAddBudgetClick, onAiRecommendationClick)
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -438,11 +443,14 @@ fun MonthSlider(
 }
 
 @Composable
-fun ActionButtons(onAddBudgetClick: () -> Unit) {
+fun ActionButtons(
+    onAddBudgetClick: () -> Unit,
+    onAiRecommendationClick: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // AI Recommendation Button
         Button(
-            onClick = { /* TODO: AI Logic */ },
+            onClick = onAiRecommendationClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp),

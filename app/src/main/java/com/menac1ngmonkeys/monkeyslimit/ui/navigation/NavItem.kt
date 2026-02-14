@@ -33,6 +33,14 @@ sealed class NavItem (
         showTopBar = true
     )
 
+    object BudgetRecommendation : NavItem(
+        route = "budget_recommendation",
+        title = "AI Plan",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = true
+    )
+
     object Dashboard : NavItem(
         route = "dashboard",
         title = "Dashboard",
@@ -56,6 +64,25 @@ sealed class NavItem (
         showBottomBar = false,
         showTopBar = true
     )
+
+    object EditProfile : NavItem(
+        route = "edit_profile",
+        title = "Edit Profile",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = false
+    )
+
+    object ImagePreview : NavItem(
+        route = "image_preview/{encodedUri}",
+        title = "Preview Image",
+        iconId = 0,
+        showBottomBar = false,
+        showTopBar = false // We'll build a custom top bar in the screen
+    ) {
+        // Helper to create the route with the argument
+        fun createRoute(encodedUri: String) = "image_preview/$encodedUri"
+    }
 
     object CompleteProfile : NavItem(
         route = "complete_profile",
@@ -193,6 +220,7 @@ sealed class NavItem (
             AddBudget,
             Settings,
             Profile,
+            EditProfile,
             ScanTransaction,
             GalleryTransaction,
             ManualTransaction,
@@ -201,7 +229,8 @@ sealed class NavItem (
             SelectMember,
             SplitResult,
             SmartSplitHistory,
-            SmartSplitDetail
+            SmartSplitDetail,
+            BudgetRecommendation
         )
 
         val FABMenu = listOf(

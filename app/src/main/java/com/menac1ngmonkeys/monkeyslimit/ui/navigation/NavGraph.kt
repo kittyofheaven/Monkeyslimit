@@ -1,5 +1,6 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -20,6 +22,7 @@ import androidx.navigation.navArgument
 import com.menac1ngmonkeys.monkeyslimit.ui.analytics.AnalyticsScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.budget.AddBudgetScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.budget.BudgetRecommendationScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.budget.BudgetScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.DashboardScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.profile.ProfileScreen
@@ -38,6 +41,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.transaction.ScanTransactionScreen
 import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.ui.profile.EditProfileScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.profile.ImagePreviewScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -100,6 +104,11 @@ fun NavGraph(
         }
         composable(NavItem.Budget.route) {
             BudgetScreen(navController = navController)
+        }
+        composable(NavItem.BudgetRecommendation.route) {
+            BudgetRecommendationScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         // ROUTE for the AddBudgetScreen
         composable("add_budget") {
@@ -181,12 +190,24 @@ fun NavGraph(
                 onNavigateToProfile = { navController.navigateSingleTopTo(NavItem.Profile.route) }
             )
         }
-
         composable(NavItem.Profile.route) {
             ProfileScreen(navController = navController)
         }
-        composable("edit_profile") {
-            EditProfileScreen(navController)
+        composable(NavItem.EditProfile.route) {
+            EditProfileScreen(navController = navController)
+        }
+        composable(
+            route = NavItem.ImagePreview.route,
+            arguments = listOf(navArgument("encodedUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val encodedUri = backStackEntry.arguments?.getString("encodedUri") ?: return@composable
+            // Decode the URI string back to a Uri object
+            val imageUri = Uri.decode(encodedUri)
+
+            ImagePreviewScreen(
+                navController = navController,
+                imageUri = Uri.parse(imageUri)
+            )
         }
         composable(NavItem.CompleteProfile.route) {
             CompleteProfileScreen(onComplete = {
@@ -245,6 +266,7 @@ fun NavGraph(
         ) { backStackEntry ->
             val imageUriString = backStackEntry.arguments?.getString("imageUri")
             val ocrText = backStackEntry.arguments?.getString("ocrText")
+            val context = LocalContext.current
 
             // Create ViewModel
             val viewModel: ReviewTransactionViewModel = viewModel(
@@ -257,7 +279,7 @@ fun NavGraph(
 
                 // If OCR text was passed, try to extract Date and Amount
                 if (!ocrText.isNullOrEmpty()) {
-                    viewModel.parseReceiptText(ocrText)
+                    viewModel.parseReceiptData(context, ocrText)
                 }
             }
 

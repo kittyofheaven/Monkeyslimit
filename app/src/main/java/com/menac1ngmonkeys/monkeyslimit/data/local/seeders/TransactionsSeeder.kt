@@ -3,6 +3,8 @@ package com.menac1ngmonkeys.monkeyslimit.data.local.seeders
 import com.menac1ngmonkeys.monkeyslimit.data.local.dao.TransactionsDao
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
+import java.util.Calendar
+import java.util.Date
 
 object TransactionsSeeder {
     suspend fun seed(
@@ -12,94 +14,109 @@ object TransactionsSeeder {
     ) {
         if (transactionsDao.count() > 0) return
 
-        // 1. EXPENSES
-        val expenseList = listOf(
-            // --- Food and Beverages ---
-            Transactions(0, SeedUtils.daysAgo(0), 3_910_000.0, "Lunch with president", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(1),   910_000.0, "Lunch with team", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(4),   120_000.0, "Sarapan roti & kopi", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(6),   350_000.0, "Makan malam restoran Jepang", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(10),  185_000.0, "Es kopi + snack", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+        // Helper to safely get budget IDs
+        fun getBudget(name: String): Int? = budgetsByName[name]
 
-            // --- Transport ---
-            Transactions(0, SeedUtils.daysAgo(2),   300_000.0, "Bensin motor", null, budgetsByName["Transport"], categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(5),    45_000.0, "Parkir mall", null, budgetsByName["Transport"], categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(9),    20_000.0, "Ojek ke kantor", null, budgetsByName["Transport"], categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(13),  350_000.0, "Servis motor ringan", null, budgetsByName["Transport"], categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(18),  150_000.0, "Tol + bensin perjalanan", null, budgetsByName["Transport"], categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
+        // Helper to generate specific dates (Month is 1-12)
+        fun getDate(year: Int, month: Int, day: Int): Date {
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.YEAR, year)
+            cal.set(Calendar.MONTH, month - 1) // Calendar months are 0-indexed
+            val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+            cal.set(Calendar.DAY_OF_MONTH, day.coerceIn(1, maxDay))
 
-            // --- Shopping ---
-            Transactions(0, SeedUtils.daysAgo(3), 2_500_000.0, "Belanja mingguan", null, budgetsByName["Groceries"], categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE), // Note: Corrected category to Food based on 'Belanja mingguan' usually being groceries, but using F&B category ID here as per original logic or change to Shopping if appropriate
-            Transactions(0, SeedUtils.daysAgo(7),   890_000.0, "Kaos & celana Uniqlo", null, budgetsByName["Shopping"], categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(11), 1_250_000.0, "Keyboard mechanical", null, budgetsByName["Shopping"], categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(17),  720_000.0, "Sepatu olahraga", null, budgetsByName["Shopping"], categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(20),  135_000.0, "Aksesoris HP", null, budgetsByName["Shopping"], categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
+            // Set random time to avoid ordering issues
+            cal.set(Calendar.HOUR_OF_DAY, 12)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            return cal.time
+        }
 
-            // --- Bills ---
-            Transactions(0, SeedUtils.daysAgo(5), 1_200_000.0, "Listrik PLN", null, budgetsByName["Bills"], categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(12),  450_000.0, "Bayar internet wifi", null, budgetsByName["Bills"], categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(15),  150_000.0, "Pulsa & paket data", null, budgetsByName["Bills"], categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(24),  980_000.0, "Iuran air PAM", null, budgetsByName["Bills"], categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(28),  149_000.0, "Langganan streaming", null, budgetsByName["Bills"], categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
+        val allTransactions = mutableListOf<Transactions>()
 
-            // --- Entertainment ---
-            Transactions(0, SeedUtils.daysAgo(7),    600_000.0, "Tiket film", null, budgetsByName["Entertainment"], categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(14),   200_000.0, "Top-up game Genshin", null, budgetsByName["Entertainment"], categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(22),   350_000.0, "Board games", null, budgetsByName["Entertainment"], categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(26),   110_000.0, "Karaoke 1 jam", null, budgetsByName["Entertainment"], categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
-
-            // --- Health ---
-            Transactions(0, SeedUtils.daysAgo(8),   450_000.0, "Obat flu", null, budgetsByName["Health"], categoriesByName.getValue("Health"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(16),  900_000.0, "Pemeriksaan klinik", null, budgetsByName["Health"], categoriesByName.getValue("Health"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(23),  320_000.0, "Vitamin & suplement", null, budgetsByName["Health"], categoriesByName.getValue("Health"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(29),  600_000.0, "Gym membership", null, budgetsByName["Health"], categoriesByName.getValue("Health"), TransactionType.EXPENSE),
-
-            // --- Education ---
-            Transactions(0, SeedUtils.daysAgo(10),  200_000.0, "Buku catatan", null, budgetsByName["Education"], categoriesByName.getValue("Education"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(19), 1_400_000.0, "Kursus online Android", null, budgetsByName["Education"], categoriesByName.getValue("Education"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(27),  125_000.0, "Alat tulis kuliah", null, budgetsByName["Education"], categoriesByName.getValue("Education"), TransactionType.EXPENSE),
-
-            // --- Other ---
-            Transactions(0, SeedUtils.daysAgo(21),  300_000.0, "Hadiah teman ulang tahun", null, budgetsByName["Other"], categoriesByName.getValue("Other"), TransactionType.EXPENSE),
-            Transactions(0, SeedUtils.daysAgo(25),  180_000.0, "Sedekah mingguan", null, budgetsByName["Other"], categoriesByName.getValue("Other"), TransactionType.EXPENSE)
+        // ==========================================
+        // DECEMBER 2025 (Holiday Season)
+        // ==========================================
+        val decIncomes = listOf(
+            Transactions(0, getDate(2025, 12, 1), 25_000_000.0, "Gaji Desember", null, null, categoriesByName.getValue("Salary"), TransactionType.INCOME),
+            Transactions(0, getDate(2025, 12, 20), 10_000_000.0, "Bonus Akhir Tahun", null, null, categoriesByName.getValue("Bonus"), TransactionType.INCOME), // Big bonus
+            Transactions(0, getDate(2025, 12, 15), 2_000_000.0, "Dividen Saham Q4", null, null, categoriesByName.getValue("Investment"), TransactionType.INCOME)
         )
 
-        // 2. INCOMES (New!)
-        // Note: budgetId is null for incomes.
-        val incomeList = listOf(
-            Transactions(
-                id = 0,
-                date = SeedUtils.daysAgo(28),
-                totalAmount = 25_000_000.0,
-                note = "Gaji Bulanan",
-                imagePath = null,
-                budgetId = null, // Income is not part of a budget limit
-                categoryId = categoriesByName.getValue("Salary"),
-                type = TransactionType.INCOME
-            ),
-            Transactions(
-                id = 0,
-                date = SeedUtils.daysAgo(15),
-                totalAmount = 2_500_000.0,
-                note = "Proyek Freelance",
-                imagePath = null,
-                budgetId = null,
-                categoryId = categoriesByName.getValue("Bonus"),
-                type = TransactionType.INCOME
-            ),
-            Transactions(
-                id = 0,
-                date = SeedUtils.daysAgo(5),
-                totalAmount = 500_000.0,
-                note = "Dividen Saham",
-                imagePath = null,
-                budgetId = null,
-                categoryId = categoriesByName.getValue("Investment"),
-                type = TransactionType.INCOME
-            )
+        val decExpenses = listOf(
+            // Needs
+            Transactions(0, getDate(2025, 12, 2), 3_000_000.0, "Groceries Bulanan", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2025, 12, 5), 500_000.0, "Makan Luar Keluarga", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            // Wants (High due to holidays)
+            Transactions(0, getDate(2025, 12, 10), 2_500_000.0, "Kado Natal & Tahun Baru", null, getBudget("Wants (Lifestyle)"), categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2025, 12, 24), 1_500_000.0, "Staycation Hotel", null, getBudget("Wants (Lifestyle)"), categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2025, 12, 31), 800_000.0, "Pesta BBQ Tahun Baru", null, getBudget("Wants (Lifestyle)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            // Bills
+            Transactions(0, getDate(2025, 12, 1), 1_500_000.0, "Listrik & Air", null, getBudget("Bills and Housing"), categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2025, 12, 28), 5_000_000.0, "Investasi Tambahan", null, getBudget("Investment and Donation"), categoriesByName.getValue("Other"), TransactionType.EXPENSE)
+        )
+        allTransactions.addAll(decIncomes + decExpenses)
+
+
+        // ==========================================
+        // JANUARY 2026 (New Year)
+        // ==========================================
+        val janIncomes = listOf(
+            Transactions(0, getDate(2026, 1, 1), 25_000_000.0, "Gaji Januari", null, null, categoriesByName.getValue("Salary"), TransactionType.INCOME),
+            Transactions(0, getDate(2026, 1, 15), 3_000_000.0, "Proyek Freelance Awal Tahun", null, null, categoriesByName.getValue("Bonus"), TransactionType.INCOME),
+            Transactions(0, getDate(2026, 1, 10), 500_000.0, "Hadiah Imlek", null, null, categoriesByName.getValue("Bonus"), TransactionType.INCOME)
         )
 
-        transactionsDao.insertAll(expenseList + incomeList)
+        val janExpenses = listOf(
+            // Needs
+            Transactions(0, getDate(2026, 1, 3), 2_800_000.0, "Belanja Bulanan", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 1, 12), 150_000.0, "Kopi Kantor (Paket)", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            // Education (New Year Resolutions)
+            Transactions(0, getDate(2026, 1, 5), 1_200_000.0, "Gym Membership Tahunan", null, getBudget("Education and Health"), categoriesByName.getValue("Health"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 1, 7), 500_000.0, "Buku Self Improvement", null, getBudget("Education and Health"), categoriesByName.getValue("Education"), TransactionType.EXPENSE),
+            // Transport
+            Transactions(0, getDate(2026, 1, 2), 400_000.0, "Isi E-Toll", null, getBudget("Transportation"), categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 1, 20), 250_000.0, "Service Motor Berkala", null, getBudget("Transportation"), categoriesByName.getValue("Transport"), TransactionType.EXPENSE),
+            // Bills
+            Transactions(0, getDate(2026, 1, 1), 1_300_000.0, "Listrik & Internet", null, getBudget("Bills and Housing"), categoriesByName.getValue("Bills"), TransactionType.EXPENSE)
+        )
+        allTransactions.addAll(janIncomes + janExpenses)
+
+
+        // ==========================================
+        // FEBRUARY 2026 (Current Month)
+        // ==========================================
+        val febIncomes = listOf(
+            Transactions(0, getDate(2026, 2, 1), 25_000_000.0, "Gaji Februari", null, null, categoriesByName.getValue("Salary"), TransactionType.INCOME),
+            Transactions(0, getDate(2026, 2, 5), 1_500_000.0, "Dividen Saham", null, null, categoriesByName.getValue("Investment"), TransactionType.INCOME),
+            Transactions(0, getDate(2026, 2, 8), 3_500_000.0, "Hasil Sewa Ruko", null, null, categoriesByName.getValue("Investment"), TransactionType.INCOME),
+            Transactions(0, getDate(2026, 2, 10), 750_000.0, "Jual Barang Bekas", null, null, categoriesByName.getValue("Bonus"), TransactionType.INCOME)
+        )
+
+        val febExpenses = listOf(
+            // Needs
+            Transactions(0, getDate(2026, 2, 2), 350_000.0, "Lunch with team", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 2, 5), 2_500_000.0, "Belanja mingguan (Groceries)", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 2, 6), 120_000.0, "Sarapan roti & kopi", null, getBudget("Needs (Food and Drinks)"), categoriesByName.getValue("Food and Beverages"), TransactionType.EXPENSE),
+
+            // Wants (Valentine prep?)
+            Transactions(0, getDate(2026, 2, 4), 890_000.0, "Kaos & celana Uniqlo", null, getBudget("Wants (Lifestyle)"), categoriesByName.getValue("Shopping"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 2, 7), 600_000.0, "Tiket Konser", null, getBudget("Wants (Lifestyle)"), categoriesByName.getValue("Entertainment"), TransactionType.EXPENSE),
+
+            // Bills
+            Transactions(0, getDate(2026, 2, 1), 1_200_000.0, "Listrik PLN Token", null, getBudget("Bills and Housing"), categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
+            Transactions(0, getDate(2026, 2, 1), 450_000.0, "Internet WiFi", null, getBudget("Bills and Housing"), categoriesByName.getValue("Bills"), TransactionType.EXPENSE),
+
+            // Health
+            Transactions(0, getDate(2026, 2, 3), 450_000.0, "Obat & Vitamin", null, getBudget("Education and Health"), categoriesByName.getValue("Health"), TransactionType.EXPENSE),
+
+            // Donation
+            Transactions(0, getDate(2026, 2, 5), 500_000.0, "Sedekah Jumat", null, getBudget("Investment and Donation"), categoriesByName.getValue("Other"), TransactionType.EXPENSE)
+        )
+        allTransactions.addAll(febIncomes + febExpenses)
+
+        // Insert All
+        transactionsDao.insertAll(allTransactions)
     }
 }
-

@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -236,12 +237,18 @@ fun AuthGatekeeper(
 }
 
 @Composable
-fun MonkeysLimitApp() {
+fun MonkeysLimitApp(
+    profileViewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
     var showTransactionDialog by remember { mutableStateOf(false) }
+
+    // Observe Profile State to get User Name
+    val profileState by profileViewModel.uiState.collectAsState()
+    val userName = profileState.name.ifEmpty { "User" }.substringBefore(" ")
 
     val allNavItems = remember {
         NavItem.mainNavItems + NavItem.subNavItems
@@ -251,9 +258,9 @@ fun MonkeysLimitApp() {
     val showBottomBar = currentScreen?.showBottomBar
 
     val topBarTitle = if (currentScreen == NavItem.Dashboard) {
-        "Hi, Welcome Back"
+        "Hi, $userName"
     } else {
-        currentScreen?.title ?: "Hi, Welcome Back..."
+        currentScreen?.title ?: "Hi, $userName..."
     }
 
     if (showTransactionDialog) {

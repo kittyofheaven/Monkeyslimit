@@ -1,6 +1,5 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.components
 
-import java.math.BigDecimal
 import com.menac1ngmonkeys.monkeyslimit.R
 
 sealed class BalExpData (
@@ -8,8 +7,8 @@ sealed class BalExpData (
     val amount: Double,
     val iconId: Int,
 ) {
-    class Balance(amount: Double) : BalExpData(
-        title = "Total Balance",
+    class Income(amount: Double) : BalExpData(
+        title = "Income This Month",
         amount = amount,
         iconId = R.drawable.income
     )
