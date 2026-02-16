@@ -32,6 +32,7 @@ import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesi
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.fill
@@ -197,6 +198,8 @@ fun IncomeExpenseLineChart(
     )
 
     val startAxis = VerticalAxis.rememberStart(
+        // Label Text Color
+        label = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
         valueFormatter = { _, y, _ ->
             val label = compactNumber(y)
             if (label.isBlank()) " " else label
@@ -204,6 +207,8 @@ fun IncomeExpenseLineChart(
     )
 
     val bottomAxis = HorizontalAxis.rememberBottom(
+        // 1. Label Text Color
+        label = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
         valueFormatter = { _, x, _ ->
             val index = x.toInt()
             val label = if (dateLabels.isNotEmpty()) {
@@ -217,7 +222,7 @@ fun IncomeExpenseLineChart(
 
     // --- ZOOM & SCROLL LOCK ---
     // By disabling zoom, Vico automatically fits the X-axis content to the available width.
-    val zoomState = rememberVicoZoomState(zoomEnabled = false)
+    val zoomState = rememberVicoZoomState(zoomEnabled = true)
     val scrollState = rememberVicoScrollState()
 
     CartesianChartHost(

@@ -1,13 +1,9 @@
 package com.menac1ngmonkeys.monkeyslimit
 
+import AppViewModelProvider
 import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -53,7 +49,6 @@ import com.google.android.gms.common.api.ApiException
 import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.BudgetsSeeder
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
-import com.menac1ngmonkeys.monkeyslimit.data.worker.NotificationHelper
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.LoginScreen
