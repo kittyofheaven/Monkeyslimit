@@ -97,9 +97,31 @@ fun CompleteProfileScreen(
     if (activeError != null) {
         AlertDialog(
             onDismissRequest = { authViewModel.clearError(); validationError = null },
-            title = { Text("Input Required") },
-            text = { Text(activeError) },
-            confirmButton = { TextButton(onClick = { authViewModel.clearError(); validationError = null }) { Text("OK", color = AuthPrimaryGreen) } }
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Input Required",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = activeError,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { authViewModel.clearError(); validationError = null },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AuthPrimaryYellow),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("OK", color = Color.Black, fontWeight = FontWeight.SemiBold)
+                }
+            }
         )
     }
 

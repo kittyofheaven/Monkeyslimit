@@ -7,6 +7,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,9 +23,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.menac1ngmonkeys.monkeyslimit.R
+import com.menac1ngmonkeys.monkeyslimit.data.worker.NotificationHelper
+import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileAuthStatus
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileUiState
+import com.menac1ngmonkeys.monkeyslimit.utils.BatteryUtils
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
 
@@ -33,40 +41,85 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showBatteryDialog by remember { mutableStateOf(false) }
 
     val uiState by profileViewModel.uiState.collectAsState()
 
     var darkMode by remember { mutableStateOf(false) }
-    var notification by remember { mutableStateOf(true) }
+    val isNotificationEnabled = (uiState.status as? ProfileAuthStatus.Verified)?.user?.isNotificationEnabled ?: true
+    val context = LocalContext.current // Get context for WorkManager
 
     if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showLogoutDialog = false
-            },
+            onDismissRequest = { showLogoutDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
             title = {
-                Text("Logout")
+                Text(
+                    text = "Log Out",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
             },
             text = {
-                Text("Are you sure you want to log out?")
+                Text(
+                    text = "Are you sure you want to log out?",
+                    color = Color.DarkGray
+                )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         showLogoutDialog = false
                         authViewModel.signOut()
-                    }
+                    },
                 ) {
-                    Text("Yes")
+                    Text("Yes", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
-                TextButton(
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
+
+    // --- BATTERY DIALOG ---
+    if (showBatteryDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatteryDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Background Reminders 🐒",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "To ensure the Monkeyslimit notification can work, please set MonkeysLimit to 'No restrictions' in your battery settings.",
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
                     onClick = {
-                        showLogoutDialog = false
-                    }
+                        showBatteryDialog = false
+                        BatteryUtils.openBatteryOptimizationSettings(context)
+                    },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFACF69)),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    Text("Cancel")
+                    Text("Go to Settings", color = Color.Black, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatteryDialog = false }) {
+                    Text("Later", color = Color.Gray, fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -88,30 +141,44 @@ fun ProfileScreen(
         SettingToggle(
             icon = Icons.Default.Notifications,
             title = "Notifications",
-            checked = notification,
-            onCheckedChange = { notification = it }
+            checked = isNotificationEnabled,
+            onCheckedChange = { isEnabled ->
+                profileViewModel.toggleLocalNotifications(isEnabled)
+                if (isEnabled) {
+                    // Restart the reminders
+                    NotificationHelper.scheduleDailyReminders(context)
+
+                    // Check if battery is restricted. If yes, show the nice dialog!
+                    if (!BatteryUtils.isBatteryOptimizationIgnored(context)) {
+                        showBatteryDialog = true
+                    }
+                } else {
+                    // Kill all running workers
+                    NotificationHelper.cancelAllReminders(context)
+                }
+            }
         )
 
         Spacer(Modifier.height(12.dp))
 
+//        SettingItem(
+//            icon = Icons.Default.Inbox,
+//            title = "Inbox",
+//            onClick = { }
+//        )
+//
+//        Spacer(Modifier.height(12.dp))
+//
+//        SettingItem(
+//            icon = Icons.AutoMirrored.Filled.Help,
+//            title = "FAQ",
+//            onClick = { }
+//        )
+//
+//        Spacer(Modifier.height(12.dp))
+
         SettingItem(
-            icon = Icons.Default.Inbox,
-            title = "Inbox",
-            onClick = { }
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        SettingItem(
-            icon = Icons.Default.Help,
-            title = "FAQ",
-            onClick = { }
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        SettingItem(
-            icon = Icons.Default.Logout,
+            icon = Icons.AutoMirrored.Filled.Logout,
             title = "Log Out",
             onClick = {
                 showLogoutDialog = true
@@ -182,10 +249,7 @@ private fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-
-                Row(
-
-                ) {
+                Row{
                     Text(
                         uiState.name,
                         fontWeight = FontWeight.Bold,
@@ -195,9 +259,7 @@ private fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
 
                 Spacer(Modifier.height(3.dp))
 
-                Row(
-
-                ){
+                Row{
                     Text(
                         uiState.email,
                         style = MaterialTheme.typography.bodyMedium,
@@ -232,7 +294,7 @@ private fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
 
 @Composable
 private fun SettingToggle(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
@@ -273,7 +335,7 @@ private fun SettingToggle(
 
 @Composable
 private fun SettingItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     onClick: () -> Unit
 ) {
@@ -304,7 +366,7 @@ private fun SettingItem(
             )
 
             Icon(
-                Icons.Default.KeyboardArrowRight,
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = Color.Gray
             )

@@ -151,16 +151,35 @@ fun EditProfileScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text("Save Changes") },
-            text = { Text("Are you sure you want to save these changes?") },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Save Changes",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to save these changes?",
+                    color = Color.DarkGray
+                )
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    showSaveDialog = false
-                    viewModel.saveProfile(context = context, onSuccess = { navController.popBackStack() })
-                }) { Text("Yes") }
+                Button(
+                    onClick = {
+                        showSaveDialog = false
+                        viewModel.saveProfile(context = context, onSuccess = { navController.popBackStack() })
+                    },
+                ) {
+                    Text("Yes", fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
             }
         )
     }
@@ -326,7 +345,11 @@ private fun DropdownField(label: String, selectedValue: String, options: List<St
                     Icon(Icons.Default.ArrowDropDown, null, tint = Color(0xFF7A9B00))
                 }
             }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                containerColor = MaterialTheme.colorScheme.surface,
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
                 options.forEach { DropdownMenuItem(text = { Text(it) }, onClick = { onSelected(it); expanded = false }) }
             }
         }
