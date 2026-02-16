@@ -42,7 +42,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Members
+import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeyLoadingScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftMember
@@ -106,6 +108,13 @@ fun ReviewSmartSplitScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // This state keeps the overlay alive long enough to finish its fade-out animation
+    var showLoadingScreen by remember { mutableStateOf(uiState.isLoading) }
+
+    LaunchedEffect(uiState.isLoading) {
+        if (uiState.isLoading) showLoadingScreen = true
+    }
+
     // --- DIALOGS ---
     if (isImageExpanded && uiState.imageUri != null) {
         Dialog(onDismissRequest = { isImageExpanded = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -167,18 +176,14 @@ fun ReviewSmartSplitScreen(
         }
     }
 
-    // --- MAIN CONTENT ---
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        } else {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
-                // ... (Image, Header, Bill Name, Friends, Items code remains same) ...
                 // 1. IMAGE PREVIEW
                 if (uiState.imageUri != null) {
                     Box(
@@ -361,8 +366,18 @@ fun ReviewSmartSplitScreen(
                 ) { Text("Preview Split") }
                 Spacer(Modifier.height(20.dp))
             }
+            // THE LOADING OVERLAY (Drawn last = floats on top)
+            if (showLoadingScreen) {
+                MonkeyLoadingScreen(
+                    loadingText = "Analyzing...",
+                    monkeyImageRes = R.drawable.positive_4,
+                    isFinished = !uiState.isLoading, // Tells the bar to sprint to 100% and fade
+                    onDismiss = { showLoadingScreen = false } // Actually kills the view after fade
+                )
+            }
         }
     }
+    // --- MAIN CONTENT ---
 }
 
 // --- REUSABLE COMPONENTS ---

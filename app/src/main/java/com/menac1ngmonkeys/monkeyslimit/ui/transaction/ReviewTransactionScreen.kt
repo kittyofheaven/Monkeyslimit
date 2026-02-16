@@ -34,9 +34,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
+import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeyLoadingScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysTimePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
@@ -105,6 +107,13 @@ fun ReviewTransactionScreenContent(
     var showTimePicker by remember { mutableStateOf(false) }
 
     var globalSelectedBudget by remember(budgets) { mutableStateOf(budgets.firstOrNull()) }
+
+    // This state keeps the overlay alive long enough to finish its fade-out animation
+    var showLoadingScreen by remember { mutableStateOf(isLoading) }
+
+    LaunchedEffect(isLoading) {
+        if (isLoading) showLoadingScreen = true
+    }
 
     // PERBAIKAN 3: Inisialisasi items dengan logika cerdas
     var items by remember(categories, budgets) {
@@ -226,9 +235,8 @@ fun ReviewTransactionScreenContent(
 
     // --- MAIN CONTENT ---
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        } else {
+        // Root Box allows the Loading Screen to float on top of the UI
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -344,6 +352,16 @@ fun ReviewTransactionScreenContent(
                 }
                 Spacer(Modifier.height(20.dp))
             }
+        }
+
+        // THE LOADING OVERLAY (Drawn last = floats on top)
+        if (showLoadingScreen) {
+            MonkeyLoadingScreen(
+                loadingText = "Analyzing...",
+                monkeyImageRes = R.drawable.positive_3,
+                isFinished = !isLoading, // Tells the bar to sprint to 100% and fade
+                onDismiss = { showLoadingScreen = false } // Actually kills the view after fade
+            )
         }
     }
 }

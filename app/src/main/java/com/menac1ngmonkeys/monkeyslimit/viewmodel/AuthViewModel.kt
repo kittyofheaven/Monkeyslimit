@@ -150,6 +150,31 @@ class AuthViewModel(
             }
     }
 
+    fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit) {
+        if (email.isBlank()) {
+            _uiState.update { it.copy(error = "Please enter your email address to reset your password.") }
+            return
+        }
+
+        // NEW: Check if it actually looks like an email address
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _uiState.update { it.copy(error = "Please enter a valid email address.") }
+            return
+        }
+
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                _uiState.update { it.copy(isLoading = false) }
+                if (task.isSuccessful) {
+                    onSuccess()
+                } else {
+                    // Firebase might throw an error if the user doesn't exist
+                    _uiState.update { it.copy(error = task.exception?.message ?: "Failed to send reset email.") }
+                }
+            }
+    }
+
     fun signUpWithEmail(
         email: String,
         password: String,

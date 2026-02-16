@@ -1,13 +1,16 @@
 package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.User
 import com.menac1ngmonkeys.monkeyslimit.data.repository.UsersRepository
+import com.menac1ngmonkeys.monkeyslimit.data.worker.NotificationHelper
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileAuthStatus
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ProfileUiState
 import kotlinx.coroutines.Dispatchers
@@ -114,6 +117,18 @@ class ProfileViewModel(
         }
     }
 
+    fun toggleLocalNotifications(isEnabled: Boolean) {
+        val currentStatus = uiState.value.status
+        if (currentStatus is ProfileAuthStatus.Verified) {
+            viewModelScope.launch(Dispatchers.IO) {
+                // Update only the local Room database
+                val updatedUser = currentStatus.user.copy(isNotificationEnabled = isEnabled)
+                usersRepository.saveUser(updatedUser)
+                Log.d("ProfileViewModel", "Local notification preference saved: $isEnabled")
+            }
+        }
+    }
+
     private fun calculateAge(birthDate: Date): Int {
         val dob = Calendar.getInstance().apply { time = birthDate }
         val today = Calendar.getInstance()
@@ -129,5 +144,18 @@ class ProfileViewModel(
     private fun formatDate(date: Date): String {
         val formatter = SimpleDateFormat("d MMMM yyyy", Locale.getDefault())
         return formatter.format(date)
+    }
+
+    // Inside ProfileViewModel.kt or a specialized DevViewModel
+    fun hardResetApp(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val db = AppDatabase.getDatabase(context)
+            db.resetDatabase()
+
+            // After nuking, you might want to cancel reminders too
+            NotificationHelper.cancelAllReminders(context)
+
+            Log.d("Database", "All local data has been wiped! 🐒💨")
+        }
     }
 }

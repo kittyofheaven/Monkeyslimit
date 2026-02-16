@@ -45,6 +45,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
+import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeyLoadingScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ScanTransactionViewModel
 import java.io.File
