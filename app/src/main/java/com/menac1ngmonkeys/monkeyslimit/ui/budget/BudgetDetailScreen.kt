@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.dashboard.TransactionRow
 import com.menac1ngmonkeys.monkeyslimit.ui.state.BudgetDetailUiState
@@ -52,7 +53,8 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetDetailViewModel
 fun BudgetDetailWithHeader(
     viewModel: BudgetDetailViewModel,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavHostController,
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -146,7 +148,12 @@ fun BudgetDetailWithHeader(
 
             Spacer(Modifier.height(8.dp))
 
-            BudgetDetailScreenContent(uiState = uiState)
+            BudgetDetailScreenContent(
+                uiState = uiState,
+                onTransactionClick = { transactionId ->
+                    navController.navigate("transaction_detail/$transactionId")
+                }
+            )
         }
     }
 }
@@ -154,7 +161,8 @@ fun BudgetDetailWithHeader(
 @Composable
 fun BudgetDetailScreenContent(
     uiState: BudgetDetailUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTransactionClick: (Int) -> Unit = {},
 ) {
     if (uiState.budget == null) {
         Box(
@@ -172,7 +180,7 @@ fun BudgetDetailScreenContent(
             item {
                 BudgetRow(
                     budgetItem = uiState.budget,
-                    onClick = {}
+                    onClick = {  }
                 )
             }
 
@@ -189,7 +197,10 @@ fun BudgetDetailScreenContent(
 
             // Transaction List
             items(uiState.relatedTransactions) { transaction ->
-                TransactionRow(transaction = transaction)
+                TransactionRow(
+                    transaction = transaction,
+                    onClick = { onTransactionClick(transaction.id) }
+                )
             }
         }
     }

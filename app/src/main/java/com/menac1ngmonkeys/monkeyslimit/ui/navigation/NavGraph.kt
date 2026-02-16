@@ -42,6 +42,7 @@ import com.menac1ngmonkeys.monkeyslimit.utils.navigateSingleTopTo
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
 import com.menac1ngmonkeys.monkeyslimit.ui.profile.EditProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.profile.ImagePreviewScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDetailScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -97,7 +98,7 @@ fun NavGraph(
             val transactionId = backStackEntry.arguments?.getInt("transactionId") ?: return@composable
 
             // Import this screen first
-            com.menac1ngmonkeys.monkeyslimit.ui.transaction.TransactionDetailScreen(
+            TransactionDetailScreen(
                 transactionId = transactionId,
                 onNavigateBack = { navController.popBackStack() }
             )

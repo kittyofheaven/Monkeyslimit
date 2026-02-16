@@ -142,7 +142,8 @@ fun BudgetScreen(
                         selectedYear = budgetListState.selectedYear,
                         onNavigateBack = {
                             screenState = BudgetScreenState.List
-                        }
+                        },
+                        navController = navController
                     )
                 }
             }
@@ -157,6 +158,7 @@ private fun BudgetDetailWrapper(
     selectedYear: Int,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    navController: NavHostController,
     viewModel: BudgetDetailViewModel = viewModel(
         key = budgetId.toString(),
         factory = BudgetDetailViewModelFactory(budgetId)
@@ -170,7 +172,8 @@ private fun BudgetDetailWrapper(
     BudgetDetailWithHeader(
         viewModel = viewModel,
         onNavigateBack = onNavigateBack,
-        modifier = modifier
+        modifier = modifier,
+        navController = navController,
     )
 }
 
