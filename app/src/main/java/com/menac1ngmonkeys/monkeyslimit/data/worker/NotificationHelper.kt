@@ -21,6 +21,13 @@ object NotificationHelper {
         scheduleSpecificReminder(context, "Reminder_9PM", 21)
     }
 
+    // In NotificationHelper.kt
+    fun cancelAllReminders(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+        workManager.cancelUniqueWork("Reminder_12PM")
+        workManager.cancelUniqueWork("Reminder_9PM")
+    }
+
     private fun scheduleSpecificReminder(context: Context, uniqueName: String, hour: Int) {
         val currentDate = Calendar.getInstance()
         val dueDate = Calendar.getInstance().apply {
@@ -47,6 +54,9 @@ object NotificationHelper {
         )
     }
 
+    // Pattern: Sleep 0ms, Vibrate 100ms, Sleep 100ms, Vibrate 100ms, Sleep 100ms, Vibrate 300ms
+    // This creates a "tap-tap-TAPP" feel.
+    private val monkeyTapPattern = longArrayOf(0, 100, 100, 100, 100, 300)
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Daily Reminders"
@@ -56,6 +66,7 @@ object NotificationHelper {
                 // Ensure it makes sound/vibration to "pop up"
                 enableLights(true)
                 enableVibration(true)
+                vibrationPattern = monkeyTapPattern
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

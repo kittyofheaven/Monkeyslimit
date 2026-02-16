@@ -49,6 +49,10 @@ class DailyReminderWorker(context: Context, params: WorkerParameters) : Coroutin
             .setLargeIcon(largeIcon)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
+
+            .setVibrate(longArrayOf(0, 100, 100, 100, 100, 300))
+            .setDefaults(NotificationCompat.DEFAULT_SOUND)
+
             // 4. ATTACH THE INTENT
             .setContentIntent(pendingIntent)
             // 5. AUTO CANCEL: Removes the notification from the tray once clicked

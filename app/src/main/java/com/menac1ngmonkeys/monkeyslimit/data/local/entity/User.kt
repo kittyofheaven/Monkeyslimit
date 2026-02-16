@@ -19,5 +19,6 @@ data class User(
     val income: String = "",
     val isMarried: Boolean = false,
     val photoUrl: String? = null,
-    val isSynced: Boolean = true
+    val isSynced: Boolean = true,
+    val isNotificationEnabled: Boolean = true
 )
