@@ -22,7 +22,7 @@ import java.util.Date
         Transactions::class,
         User::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(DateConverter::class, Converters::class)
@@ -63,6 +63,13 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE = null
             }
         }
+    }
+
+    /**
+     * The Dynamic Reset (Nuke) Function
+     */
+    suspend fun resetDatabase() {
+        this.clearAllTables() // Wipes all local Room entities
     }
 }
 

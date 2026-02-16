@@ -158,6 +158,8 @@ dependencies {
     // For Kotlin, prefer KSP (remove annotationProcessor if not needed)
     ksp(libs.androidx.room.compiler)                      // Room annotation processor
 
+    implementation(libs.androidx.work.runtime)
+
     // ---------------- Testing ----------------
     testImplementation(libs.junit)                        // Local unit tests
 

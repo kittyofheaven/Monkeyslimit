@@ -1,6 +1,11 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.navigation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -11,12 +16,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,6 +35,7 @@ import java.time.LocalDateTime
 fun TopBar(
     title: String,
     currentRoute: String?,
+    profileImageUrl: String?,
     onProfileClick: () -> Unit,
     onSettingsClick: ()-> Unit,
     onNavigateUp: () -> Unit,
@@ -38,28 +50,57 @@ fun TopBar(
             actionIconContentColor = MaterialTheme.colorScheme.onBackground
         ),
         title = {
-            Column{
-                Text(
-                    text = title,
-                    lineHeight = 0.5f.sp
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // APP LOGO
                 if (currentRoute == NavItem.Dashboard.route) {
+                    Image(
+                        painter = painterResource(id = com.menac1ngmonkeys.monkeyslimit.R.drawable.logo_monkeys_limit), // Replace with your actual drawable ID
+                        contentDescription = "App Logo",
+                        modifier = Modifier
+                            .size(60.dp) // Adjust size as needed
+                            .padding(end = 12.dp) // Space between logo and text
+                    )
+                }
+
+                Column{
                     Text(
-                        text = getGreetingMessage(),
-                        fontSize = TextUnit(12f, TextUnitType.Sp),
-                        fontWeight = FontWeight.Normal,
+                        text = title,
                         lineHeight = 0.5f.sp
                     )
+                    if (currentRoute == NavItem.Dashboard.route) {
+                        Text(
+                            text = getGreetingMessage(),
+                            fontSize = TextUnit(12f, TextUnitType.Sp),
+                            fontWeight = FontWeight.Normal,
+                            lineHeight = 0.5f.sp
+                        )
+                    }
                 }
             }
         },
         actions = {
             if (currentRoute == NavItem.Dashboard.route) {
                 IconButton(onClick = onProfileClick) {
-                    Icon(
-                        painter = painterResource(NavItem.Profile.iconId),
-                        contentDescription = NavItem.Profile.title
-                    )
+                    // 2. Logic to show Profile Picture or Fallback Icon
+                    if (!profileImageUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = profileImageUrl,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape), // Makes the image circular
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(NavItem.Profile.iconId),
+                            error = painterResource(NavItem.Profile.iconId)
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(NavItem.Profile.iconId),
+                            contentDescription = NavItem.Profile.title
+                        )
+                    }
                 }
             }
         },
@@ -102,5 +143,6 @@ private fun TopBarPreview() {
         onProfileClick = {},
         onSettingsClick = {},
         onNavigateUp = {},
+        profileImageUrl = null
     )
 }

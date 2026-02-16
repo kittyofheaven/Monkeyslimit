@@ -1,6 +1,13 @@
 package com.menac1ngmonkeys.monkeyslimit
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -46,6 +53,7 @@ import com.google.android.gms.common.api.ApiException
 import com.menac1ngmonkeys.monkeyslimit.data.local.AppDatabase
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.BudgetsSeeder
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
+import com.menac1ngmonkeys.monkeyslimit.data.worker.NotificationHelper
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.LoginScreen
@@ -74,6 +82,17 @@ class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels { AppViewModelProvider.Factory }
     private val profileViewModel: ProfileViewModel by viewModels { AppViewModelProvider.Factory }
 
+    // ADD: Permission Launcher
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("Notification", "User granted permission 🐒")
+        } else {
+            Log.w("Notification", "User denied permission. Reminder won't show.")
+        }
+    }
+
     private fun getGoogleSignInClient() = GoogleSignIn.getClient(
         this,
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -87,6 +106,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // Initialize Channel and Request Permission
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         var isReady = false
 
@@ -292,6 +316,7 @@ fun MonkeysLimitApp(
                     TopBar(
                         title = topBarTitle,
                         currentRoute = currentRoute,
+                        profileImageUrl = profileState.photoUrl,
                         onProfileClick = { navController.navigateSingleTopTo(NavItem.Profile.route) },
                         onSettingsClick = { navController.navigateSingleTopTo(NavItem.Settings.route) },
                         onNavigateUp = { navController.navigateUp() }

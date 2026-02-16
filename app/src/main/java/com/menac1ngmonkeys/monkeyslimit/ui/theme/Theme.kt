@@ -74,7 +74,8 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun MonkeyslimitTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+//    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Force light mode for now
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false, // Do not change colors based on the user's device settings
     content: @Composable () -> Unit

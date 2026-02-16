@@ -93,9 +93,31 @@ fun SignUpScreen(
     if (authUiState.error != null) {
         AlertDialog(
             onDismissRequest = { authViewModel.clearError() },
-            title = { Text("Registration Error") },
-            text = { Text(authUiState.error ?: "") },
-            confirmButton = { TextButton(onClick = { authViewModel.clearError() }) { Text("OK") } }
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Registration Error",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = authUiState.error ?: "An unknown error occurred",
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { authViewModel.clearError() },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AuthPrimaryYellow),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("OK", color = Color.Black, fontWeight = FontWeight.SemiBold)
+                }
+            }
         )
     }
 

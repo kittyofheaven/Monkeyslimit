@@ -7,11 +7,13 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.state.TransactionDetailUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Date
 
 class TransactionDetailViewModel(
@@ -129,6 +131,20 @@ class TransactionDetailViewModel(
 
     fun onEditCategoryChange(categoryId: Int) {
         _uiState.update { it.copy(editCategoryId = categoryId) }
+    }
+
+    fun deleteTransaction(onSuccess: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val transactionToDelete = _uiState.value.transaction
+            if (transactionToDelete != null) {
+                // Call your repository delete function
+                transactionsRepository.delete(transactionToDelete)
+
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            }
+        }
     }
 
     fun saveChanges() {

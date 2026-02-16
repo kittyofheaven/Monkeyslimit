@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -52,6 +53,9 @@ fun TransactionDetailScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var tempSelectedDate by remember { mutableStateOf<Long?>(null) }
 
+    // --- DELETE DIALOG STATE ---
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     // 1. Date Picker
     MonkeysDatePicker(
         show = showDatePicker,
@@ -85,6 +89,47 @@ fun TransactionDetailScreen(
             showTimePicker = false
         }
     )
+
+    // Delete Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Delete Transaction",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete this transaction? This action cannot be undone.",
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteTransaction(onSuccess = onNavigateBack)
+                    },
+                    shape = RoundedCornerShape(50.dp),
+                    // Using Red for destructive action, but keeping the exact shape and elevation theme
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -122,8 +167,13 @@ fun TransactionDetailScreen(
                             }
                         }
                     } else {
-                        IconButton(onClick = { viewModel.toggleEditMode() }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        Row {
+                            IconButton(onClick = { viewModel.toggleEditMode() }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
@@ -229,7 +279,8 @@ fun TransactionDetailScreen(
                     // --- DETAILS CARD ---
                     Card(
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {

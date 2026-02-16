@@ -189,19 +189,14 @@ private fun generateNotification(
     }
 
     // 4. Default / Motivational (Fallback if nothing else matches)
-    // Only show occasionally or if nothing else is pressing
-    if (Random.nextBoolean()) {
-        val quotes = listOf(
-            "Motivation" to "Do not save what is left after spending, but spend what is left after saving. - Warren Buffett",
-            "Tip of the Day" to "Small daily improvements are the key to staggering long-term results.",
-            "Focus, $userName" to "A budget is telling your money where to go instead of wondering where it went.",
-            "Stay Strong" to "Financial freedom is available to those who learn about it and work for it."
-        )
-        val (title, msg) = quotes.random()
-        return DashboardNotification.Achievement("Daily Wisdom", msg) // Using Achievement style for neutral/good quotes
-    }
-
-    return DashboardNotification.None
+    val quotes = listOf(
+        "Motivation" to "Do not save what is left after spending, but spend what is left after saving. - Warren Buffett",
+        "Tip of the Day" to "Small daily improvements are the key to staggering long-term results.",
+        "Focus, $userName" to "A budget is telling your money where to go instead of wondering where it went.",
+        "Stay Strong" to "Financial freedom is available to those who learn about it and work for it."
+    )
+    val (title, msg) = quotes.random()
+    return DashboardNotification.Achievement("Daily Wisdom", msg) // Using Achievement style for neutral/good quotes
 }
 
 private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
