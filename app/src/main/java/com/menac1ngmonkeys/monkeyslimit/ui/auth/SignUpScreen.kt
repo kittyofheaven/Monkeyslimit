@@ -64,6 +64,20 @@ fun SignUpScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    // Validation State (For Pop-up Dialog)
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    // Field-specific Error States (For the red text under fields)
+    var firstNameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var mobileError by remember { mutableStateOf<String?>(null) }
+    var jobError by remember { mutableStateOf<String?>(null) }
+    var birthDateError by remember { mutableStateOf<String?>(null) }
+    var genderError by remember { mutableStateOf<String?>(null) }
+    var incomeError by remember { mutableStateOf<String?>(null) }
+    var marriageStatusError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
     // Dropdown States
     var jobExpanded by remember { mutableStateOf(false) }
     var genderExpanded by remember { mutableStateOf(false) }
@@ -86,31 +100,51 @@ fun SignUpScreen(
             onConfirm = { obj, text ->
                 birthDateObject = obj
                 birthDateText = text
+                birthDateError = null // Clear error when valid date selected
             }
         )
     }
 
-    if (authUiState.error != null) {
+    // COMBINED ERROR DIALOG (Handles both Firebase errors & Local Validation errors)
+    val activeError = authUiState.error ?: validationError
+    if (activeError != null) {
         AlertDialog(
-            onDismissRequest = { authViewModel.clearError() },
+            onDismissRequest = {
+                authViewModel.clearError()
+                validationError = null
+            },
             containerColor = Color.White,
             shape = RoundedCornerShape(24.dp),
             title = {
                 Text(
-                    text = "Registration Error",
+                    text = if (activeError.startsWith("Success")) "Check Your Email"
+                    else if (validationError != null) "Input Required"
+                    else "Registration Error",
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
             },
             text = {
                 Text(
-                    text = authUiState.error ?: "An unknown error occurred",
+                    text = activeError,
                     color = Color.DarkGray
                 )
             },
             confirmButton = {
                 Button(
-                    onClick = { authViewModel.clearError() },
+                    onClick = {
+                        // 1. Check if the current message is our success message
+                        val isSuccess = activeError.startsWith("Success")
+
+                        // 2. Clear the errors to dismiss the dialog
+                        authViewModel.clearError()
+                        validationError = null
+
+                        // 3. If it was successful, navigate back to Login!
+                        if (isSuccess) {
+                            onNavigateToLogin()
+                        }
+                    },
                     shape = RoundedCornerShape(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AuthPrimaryYellow),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
@@ -144,12 +178,37 @@ fun SignUpScreen(
                     Spacer(Modifier.height(40.dp))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        AuthInputField("First Name", firstName, { firstName = it }, Modifier.weight(1f))
-                        AuthInputField("Last Name", lastName, { lastName = it }, Modifier.weight(1f))
+                        AuthInputField(
+                            label = "First Name",
+                            value = firstName,
+                            onValueChange = { firstName = it; firstNameError = null },
+                            modifier = Modifier.weight(1f),
+                            isError = firstNameError != null,
+                            errorMessage = firstNameError
+                        )
+                        AuthInputField(
+                            label = "Last Name",
+                            value = lastName,
+                            onValueChange = { lastName = it },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
 
-                    AuthInputField("Email Address", email, { email = it })
-                    AuthInputField("Mobile Number", mobile, { mobile = it })
+                    AuthInputField(
+                        label = "Email Address",
+                        value = email,
+                        onValueChange = { email = it; emailError = null },
+                        isError = emailError != null,
+                        errorMessage = emailError
+                    )
+
+                    AuthInputField(
+                        label = "Mobile Number",
+                        value = mobile,
+                        onValueChange = { mobile = it; mobileError = null },
+                        isError = mobileError != null,
+                        errorMessage = mobileError
+                    )
 
                     AuthDropdownField(
                         label = "Job",
@@ -157,44 +216,66 @@ fun SignUpScreen(
                         options = listOf("Student", "Employee", "Part-time Employee", "Entrepreneur", "Freelancer", "Housewife/househusband", "Other"),
                         expanded = jobExpanded,
                         onExpandedChange = { jobExpanded = it },
-                        onSelect = { job = it }
+                        onSelect = { job = it; jobError = null },
+                        isError = jobError != null,
+                        errorMessage = jobError
                     )
 
                     // Birth Date
                     Column(Modifier.fillMaxWidth()) {
                         Text("Birth Date", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Box(Modifier.fillMaxWidth()) {
-                            AuthInputField("", birthDateText, {}, enabled = false)
+                            AuthInputField(
+                                label = "",
+                                value = birthDateText,
+                                onValueChange = {},
+                                readOnly = true,
+                                isError = birthDateError != null,
+                                errorMessage = birthDateError
+                            )
                             Box(Modifier.matchParentSize().clickable { showDatePicker = true })
                         }
                     }
 
-                    AuthDropdownField("Gender", gender, listOf("Male", "Female"), genderExpanded, { genderExpanded = it }, { gender = it })
+                    AuthDropdownField(
+                        label = "Gender",
+                        selectedValue = gender,
+                        options = listOf("Male", "Female"),
+                        expanded = genderExpanded,
+                        onExpandedChange = { genderExpanded = it },
+                        onSelect = { gender = it; genderError = null },
+                        isError = genderError != null,
+                        errorMessage = genderError
+                    )
 
-                    // NEW: Income Dropdown
+                    // Income Dropdown
                     AuthDropdownField(
                         label = "Monthly Income",
                         selectedValue = income,
                         options = incomeOptions,
                         expanded = incomeExpanded,
                         onExpandedChange = { incomeExpanded = it },
-                        onSelect = { income = it }
+                        onSelect = { income = it; incomeError = null },
+                        isError = incomeError != null,
+                        errorMessage = incomeError
                     )
 
-                    // NEW: Marriage Status Dropdown
+                    // Marriage Status Dropdown
                     AuthDropdownField(
                         label = "Marriage Status",
                         selectedValue = marriageStatusStr,
                         options = listOf("Single", "Married"),
                         expanded = marriedExpanded,
                         onExpandedChange = { marriedExpanded = it },
-                        onSelect = { marriageStatusStr = it }
+                        onSelect = { marriageStatusStr = it; marriageStatusError = null },
+                        isError = marriageStatusError != null,
+                        errorMessage = marriageStatusError
                     )
 
                     AuthInputField(
                         label = "Password",
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { password = it; passwordError = null },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -204,25 +285,83 @@ fun SignUpScreen(
                                     tint = Color.Gray
                                 )
                             }
-                        }
+                        },
+                        isError = passwordError != null,
+                        errorMessage = passwordError
                     )
 
                     Spacer(Modifier.height(24.dp))
 
                     Button(
                         onClick = {
-                            val isMarriedBool = marriageStatusStr == "Married"
-                            onEmailSignUp(
-                                email, password, firstName, lastName,
-                                mobile, job, birthDateObject, gender,
-                                income, isMarriedBool
-                            )
+                            var hasError = false
+                            val indoPhoneRegex = "^(?:\\+62|62|0)8[0-9]{8,11}$".toRegex()
+
+                            // 1. Check Name
+                            if (firstName.isBlank()) {
+                                firstNameError = "Required"
+                                hasError = true
+                            } else if (firstName.trim().length < 3) {
+                                firstNameError = "Min 3 chars"
+                                hasError = true
+                            }
+
+                            // 2. Check Email
+                            if (email.isBlank()) {
+                                emailError = "Required"
+                                hasError = true
+                            } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                                emailError = "Invalid email format"
+                                hasError = true
+                            }
+
+                            // 3. Check Mobile
+                            if (mobile.isBlank()) {
+                                mobileError = "Required"
+                                hasError = true
+                            } else if (!indoPhoneRegex.matches(mobile)) {
+                                mobileError = "Invalid format (e.g., 08... or +628...)"
+                                hasError = true
+                            }
+
+                            // 4. Check Dropdowns & Date
+                            if (job.isBlank()) { jobError = "Required"; hasError = true }
+                            if (birthDateObject == null) { birthDateError = "Required"; hasError = true }
+                            if (gender.isBlank()) { genderError = "Required"; hasError = true }
+                            if (income.isBlank()) { incomeError = "Required"; hasError = true }
+                            if (marriageStatusStr.isBlank()) { marriageStatusError = "Required"; hasError = true }
+
+                            // 5. Check Password
+                            if (password.isBlank()) {
+                                passwordError = "Required"
+                                hasError = true
+                            } else if (password.length < 6) {
+                                passwordError = "Min 6 chars"
+                                hasError = true
+                            }
+
+                            // FINISH: If any field had an error, show the dialog. Otherwise, save!
+                            if (hasError) {
+                                validationError = "Please check the highlighted fields below."
+                            } else {
+                                // ALL VALID -> Proceed with Registration
+                                val isMarriedBool = marriageStatusStr == "Married"
+                                onEmailSignUp(
+                                    email, password, firstName, lastName,
+                                    mobile, job, birthDateObject, gender,
+                                    income, isMarriedBool
+                                )
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(0.7f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AuthPrimaryYellow),
                         enabled = !isLoading
                     ) {
-                        Text("Register", color = Color.Black, fontWeight = FontWeight.Bold)
+                        if (isLoading) {
+                            CircularProgressIndicator(Modifier.size(24.dp), Color.Black)
+                        } else {
+                            Text("Register", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
                     }
 
                     Text(

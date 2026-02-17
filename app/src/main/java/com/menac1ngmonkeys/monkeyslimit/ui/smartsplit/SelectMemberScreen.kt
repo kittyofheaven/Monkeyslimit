@@ -203,8 +203,9 @@ fun AddMemberDialog(
         confirmButton = {
             Button(onClick = {
                 val cleanPhone = phone.trim()
-                // Minimal validation: Numeric and length
-                val isValidFormat = cleanPhone.all { it.isDigit() || it == '+' } && cleanPhone.length >= 10
+                // Indonesian Phone Regex
+                val indoPhoneRegex = "^(?:\\+62|62|0)8[0-9]{8,11}$".toRegex()
+                val isValidFormat = indoPhoneRegex.matches(cleanPhone)
 
                 if (name.isNotBlank() && isValidFormat) {
                     onConfirm(name, cleanPhone, note)
@@ -212,7 +213,7 @@ fun AddMemberDialog(
                     if (name.isBlank()) isNameError = true
                     if (!isValidFormat) {
                         isPhoneError = true
-                        phoneMsg = "Invalid format (min 10 digits)"
+                        phoneMsg = "Invalid format (e.g., 08... or +628...)"
                     }
                 }
             }) { Text(if(isEditMode) "Save" else "Add") }

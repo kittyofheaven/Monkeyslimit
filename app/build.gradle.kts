@@ -166,7 +166,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)        // Instrumented tests (JUnit)
     androidTestImplementation(libs.androidx.espresso.core)// Espresso UI tests
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4) // Compose UI tests
+    // UI Testing (Android Test)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    // Needed for "createComposeRule"
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
+    // Debug Manifest (Required for UI tests to launch activities)
+    debugImplementation(libs.androidx.ui.test.manifest)
 
     debugImplementation(libs.androidx.compose.ui.tooling) // Layout inspector tooling
     debugImplementation(libs.androidx.compose.ui.test.manifest)

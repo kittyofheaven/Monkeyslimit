@@ -134,16 +134,49 @@ class AuthViewModel(
     // =========================================================================
 
     fun signInWithEmail(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.update { it.copy(error = "Email and password are required") }
-            return
+        val cleanEmail = email.trim()
+        // Pure Kotlin Regex so it doesn't break your local JUnit tests
+        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+
+        // 1. Validation Block
+        when {
+            cleanEmail.isBlank() -> {
+                _uiState.update { it.copy(error = "Please enter your email") }
+                return
+            }
+            !emailRegex.matches(cleanEmail) -> {
+                _uiState.update { it.copy(error = "Please enter a valid email address") }
+                return
+            }
+            password.isBlank() -> {
+                _uiState.update { it.copy(error = "Please enter your password") }
+                return
+            }
+             password.length < 6 -> {
+                 _uiState.update { it.copy(error = "Password must be at least 6 characters") }
+                 return
+             }
         }
 
         _uiState.update { it.copy(isLoading = true, error = null) }
-        auth.signInWithEmailAndPassword(email, password)
+        auth.signInWithEmailAndPassword(cleanEmail, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    _uiState.update { it.copy(currentUser = auth.currentUser, isLoading = false) }
+                    val user = auth.currentUser
+
+                    // NEW: CHECK IF EMAIL IS VERIFIED
+                    if (user != null && user.isEmailVerified) {
+                        _uiState.update { it.copy(currentUser = user, isLoading = false) }
+                    } else {
+                        // If not verified, sign them back out and show an error
+                        auth.signOut()
+                        _uiState.update {
+                            it.copy(
+                                error = "Please verify your email address before logging in. Check your inbox!",
+                                isLoading = false
+                            )
+                        }
+                    }
                 } else {
                     _uiState.update { it.copy(error = task.exception?.message, isLoading = false) }
                 }
@@ -195,9 +228,9 @@ class AuthViewModel(
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val firebaseUser = auth.currentUser
-                    firebaseUser?.let {
+                    firebaseUser?.let { currentUser ->
                         val user = User(
-                            uid = it.uid,
+                            uid = currentUser.uid,
                             firstName = firstName,
                             lastName = lastName,
                             email = email,
@@ -209,7 +242,32 @@ class AuthViewModel(
                             isMarried = isMarried,
                             isSynced = false
                         )
-                        saveUserToBoth(user)
+
+                        // 1. SEND THE VERIFICATION EMAIL
+                        currentUser.sendEmailVerification().addOnCompleteListener { verifyTask ->
+                            if (verifyTask.isSuccessful) {
+                                // 2. Save user data to Room/Firestore as usual
+                                saveUserToBoth(user)
+
+                                // 3. Sign them out immediately so they can't access the app yet
+                                auth.signOut()
+
+                                // 4. Update the UI to show a success message (using the error dialog)
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        error = "Success! Please check your email inbox and click the verification link before logging in."
+                                    )
+                                }
+                            } else {
+                                _uiState.update {
+                                    it.copy(
+                                        isLoading = false,
+                                        error = verifyTask.exception?.message ?: "Failed to send verification email"
+                                    )
+                                }
+                            }
+                        }
                     }
                 } else {
                     _uiState.update { it.copy(error = task.exception?.message ?: "Registration failed", isLoading = false) }

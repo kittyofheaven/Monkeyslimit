@@ -62,7 +62,16 @@ fun CompleteProfileScreen(
     var income by remember { mutableStateOf("") }
     var marriageStatusStr by remember { mutableStateOf("") }
 
+    // Validation State (For Pop-up Dialog)
     var validationError by remember { mutableStateOf<String?>(null) }
+
+    // Field-specific Error States (For the red text under fields)
+    var mobileError by remember { mutableStateOf<String?>(null) }
+    var jobError by remember { mutableStateOf<String?>(null) }
+    var birthDateError by remember { mutableStateOf<String?>(null) }
+    var genderError by remember { mutableStateOf<String?>(null) }
+    var incomeError by remember { mutableStateOf<String?>(null) }
+    var marriageStatusError by remember { mutableStateOf<String?>(null) }
 
     val authUiState by authViewModel.uiState.collectAsState()
 
@@ -90,6 +99,7 @@ fun CompleteProfileScreen(
         AuthDatePickerDialog(datePickerState, { showDatePicker = false }, { obj, text ->
             birthDateObject = obj
             birthDateText = text
+            birthDateError = null // Clear error when valid date selected
         })
     }
 
@@ -162,7 +172,14 @@ fun CompleteProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Spacer(Modifier.height(40.dp))
-                    AuthInputField("Mobile Number", mobile, { mobile = it })
+
+                    AuthInputField(
+                        label = "Mobile Number",
+                        value = mobile,
+                        onValueChange = { mobile = it; mobileError = null },
+                        isError = mobileError != null,
+                        errorMessage = mobileError
+                    )
 
                     AuthDropdownField(
                         label = "Job",
@@ -170,37 +187,59 @@ fun CompleteProfileScreen(
                         options = listOf("Student", "Employee", "Part-time Employee", "Entrepreneur", "Freelancer", "Housewife/househusband", "Other"),
                         expanded = jobExpanded,
                         onExpandedChange = { jobExpanded = it },
-                        onSelect = { job = it }
+                        onSelect = { job = it; jobError = null },
+                        isError = jobError != null,
+                        errorMessage = jobError
                     )
 
                     Column(Modifier.fillMaxWidth()) {
                         Text("Birth Date", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Box(Modifier.fillMaxWidth()) {
-                            AuthInputField("", birthDateText, {}, enabled = false)
+                            AuthInputField(
+                                label = "",
+                                value = birthDateText,
+                                onValueChange = {},
+                                readOnly = true,
+                                isError = birthDateError != null,
+                                errorMessage = birthDateError
+                            )
                             Box(Modifier.matchParentSize().clickable { showDatePicker = true })
                         }
                     }
 
-                    AuthDropdownField("Gender", gender, listOf("Male", "Female"), genderExpanded, { genderExpanded = it }, { gender = it })
+                    AuthDropdownField(
+                        label = "Gender",
+                        selectedValue = gender,
+                        options = listOf("Male", "Female"),
+                        expanded = genderExpanded,
+                        onExpandedChange = { genderExpanded = it },
+                        onSelect = { gender = it; genderError = null },
+                        isError = genderError != null,
+                        errorMessage = genderError
+                    )
 
-                    // NEW: Income
+                    // Income
                     AuthDropdownField(
                         label = "Monthly Income",
                         selectedValue = income,
                         options = incomeOptions, // Reusing list from SignUpScreen file if available, or duplicate list
                         expanded = incomeExpanded,
                         onExpandedChange = { incomeExpanded = it },
-                        onSelect = { income = it }
+                        onSelect = { income = it; incomeError = null },
+                        isError = incomeError != null,
+                        errorMessage = incomeError
                     )
 
-                    // NEW: Marriage Status
+                    // Marriage Status
                     AuthDropdownField(
                         label = "Marriage Status",
                         selectedValue = marriageStatusStr,
                         options = listOf("Single", "Married"),
                         expanded = marriedExpanded,
                         onExpandedChange = { marriedExpanded = it },
-                        onSelect = { marriageStatusStr = it }
+                        onSelect = { marriageStatusStr = it; marriageStatusError = null },
+                        isError = marriageStatusError != null,
+                        errorMessage = marriageStatusError
                     )
 
                     Spacer(Modifier.height(20.dp))
@@ -208,20 +247,32 @@ fun CompleteProfileScreen(
                     // FINISH BUTTON
                     Button(
                         onClick = {
-                            when {
-                                mobile.isBlank() -> validationError = "Please enter your mobile number"
-                                job.isBlank() -> validationError = "Please select your job"
-                                birthDateObject == null -> validationError = "Please select your birth date"
-                                gender.isBlank() -> validationError = "Please select your gender"
-                                income.isBlank() -> validationError = "Please select your income"
-                                marriageStatusStr.isBlank() -> validationError = "Please select your marriage status"
-                                else -> {
-                                    val isMarriedBool = marriageStatusStr == "Married"
-                                    authViewModel.completeGoogleProfile(
-                                        mobile, job, birthDateObject, gender,
-                                        income, isMarriedBool
-                                    )
-                                }
+                            var hasError = false
+                            val indoPhoneRegex = "^(?:\\+62|62|0)8[0-9]{8,11}$".toRegex()
+
+                            // FULL VALIDATION BLOCK (Checks everything at once)
+                            if (mobile.isBlank()) {
+                                mobileError = "Required"
+                                hasError = true
+                            } else if (!indoPhoneRegex.matches(mobile)) {
+                                mobileError = "Invalid format (e.g., 08... or +628...)"
+                                hasError = true
+                            }
+
+                            if (job.isBlank()) { jobError = "Required"; hasError = true }
+                            if (birthDateObject == null) { birthDateError = "Required"; hasError = true }
+                            if (gender.isBlank()) { genderError = "Required"; hasError = true }
+                            if (income.isBlank()) { incomeError = "Required"; hasError = true }
+                            if (marriageStatusStr.isBlank()) { marriageStatusError = "Required"; hasError = true }
+
+                            if (hasError) {
+                                validationError = "Please check the highlighted fields below."
+                            } else {
+                                val isMarriedBool = marriageStatusStr == "Married"
+                                authViewModel.completeGoogleProfile(
+                                    mobile, job, birthDateObject, gender,
+                                    income, isMarriedBool
+                                )
                             }
                         },
                         modifier = Modifier

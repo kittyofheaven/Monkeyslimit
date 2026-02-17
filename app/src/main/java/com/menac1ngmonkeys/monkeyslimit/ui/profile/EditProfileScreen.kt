@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,6 +55,18 @@ fun EditProfileScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var showPhotoOptions by remember { mutableStateOf(false) }
+
+    // Validation State (For Dialog)
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    // Field-Specific Error States
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var mobileError by remember { mutableStateOf<String?>(null) }
+    var genderError by remember { mutableStateOf<String?>(null) }
+    var birthDateError by remember { mutableStateOf<String?>(null) }
+    var jobError by remember { mutableStateOf<String?>(null) }
+    var incomeError by remember { mutableStateOf<String?>(null) }
 
     // --- PHOTO PICKERS ---
 
@@ -122,7 +135,7 @@ fun EditProfileScreen(
                     leadingContent = { Icon(Icons.Default.Refresh, null) },
                     modifier = Modifier.clickable {
                         showPhotoOptions = false
-                        viewModel.useDefaultProfilePhoto() //
+                        viewModel.useDefaultProfilePhoto()
                     }
                 )
             }
@@ -138,7 +151,10 @@ fun EditProfileScreen(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { viewModel.updateBirthDate(it) }
+                    datePickerState.selectedDateMillis?.let {
+                        viewModel.updateBirthDate(it)
+                        birthDateError = null // Clear error when valid date picked
+                    }
                     showDatePicker = false
                 }) { Text("OK") }
             },
@@ -179,6 +195,37 @@ fun EditProfileScreen(
             dismissButton = {
                 TextButton(onClick = { showSaveDialog = false }) {
                     Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
+
+    if (validationError != null) {
+        AlertDialog(
+            onDismissRequest = { validationError = null },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Input Required",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = validationError ?: "",
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { validationError = null },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFACF69)),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("OK", color = Color.Black, fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -252,17 +299,47 @@ fun EditProfileScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp)
             ) {
-                EditField("Name", uiState.name) { viewModel.updateName(it) }
-                EditField("Email Address", uiState.email) { viewModel.updateEmail(it) }
-                EditField("Phone Number", uiState.mobileNumber) {
-                    viewModel.updatePhone(it.filter { c -> c.isDigit() }.take(13))
+                EditField(
+                    label = "Name",
+                    value = uiState.name,
+                    isError = nameError != null,
+                    errorMessage = nameError
+                ) { viewModel.updateName(it); nameError = null }
+
+                EditField(
+                    label = "Email Address",
+                    value = uiState.email,
+                    isError = emailError != null,
+                    errorMessage = emailError
+                ) { viewModel.updateEmail(it); emailError = null }
+
+                EditField(
+                    label = "Phone Number",
+                    value = uiState.mobileNumber,
+                    isError = mobileError != null,
+                    errorMessage = mobileError
+                ) {
+                    viewModel.updatePhone(it.filter { c -> c.isDigit() || c == '+' }.take(15))
+                    mobileError = null
                 }
-                DropdownField("Gender", uiState.gender, genderOptions) { viewModel.updateGender(it) }
+
+                DropdownField(
+                    label = "Gender",
+                    selectedValue = uiState.gender,
+                    options = genderOptions,
+                    isError = genderError != null,
+                    errorMessage = genderError
+                ) { viewModel.updateGender(it); genderError = null }
 
                 val dateString = if (uiState.birthDate == 0L) "" else {
                     SimpleDateFormat("dd / MM / yyyy", Locale.getDefault()).format(Date(uiState.birthDate))
                 }
-                DatePickerField("Birth Of Date", dateString) { showDatePicker = true }
+                DatePickerField(
+                    label = "Birth Date",
+                    value = dateString,
+                    isError = birthDateError != null,
+                    errorMessage = birthDateError
+                ) { showDatePicker = true }
 
                 val marriageOptions = listOf("Single", "Married")
                 DropdownField(
@@ -271,13 +348,65 @@ fun EditProfileScreen(
                     options = marriageOptions
                 ) { viewModel.updateMarriageStatus(it == "Married") }
 
-                DropdownField("Job", uiState.job, jobOptions) { viewModel.updateJob(it) }
-                DropdownField("Income", uiState.income, incomeOptions) { viewModel.updateIncome(it) }
+                DropdownField(
+                    label = "Job",
+                    selectedValue = uiState.job,
+                    options = jobOptions,
+                    isError = jobError != null,
+                    errorMessage = jobError
+                ) { viewModel.updateJob(it); jobError = null }
+
+                DropdownField(
+                    label = "Income",
+                    selectedValue = uiState.income,
+                    options = incomeOptions,
+                    isError = incomeError != null,
+                    errorMessage = incomeError
+                ) { viewModel.updateIncome(it); incomeError = null }
 
                 Spacer(Modifier.height(24.dp))
 
                 Button(
-                    onClick = { showSaveDialog = true },
+                    onClick = {
+                        var hasError = false
+                        val indoPhoneRegex = "^(?:\\+62|62|0)8[0-9]{8,11}$".toRegex()
+
+                        // FULL VALIDATION BLOCK (Checks all fields simultaneously)
+                        if (uiState.name.isBlank()) {
+                            nameError = "Required"
+                            hasError = true
+                        } else if (uiState.name.trim().length < 3) {
+                            nameError = "Min 3 chars"
+                            hasError = true
+                        }
+
+                        if (uiState.email.isBlank()) {
+                            emailError = "Required"
+                            hasError = true
+                        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(uiState.email).matches()) {
+                            emailError = "Invalid email format"
+                            hasError = true
+                        }
+
+                        if (uiState.mobileNumber.isBlank()) {
+                            mobileError = "Required"
+                            hasError = true
+                        } else if (!indoPhoneRegex.matches(uiState.mobileNumber)) {
+                            mobileError = "Invalid format (e.g., 08... or +628...)"
+                            hasError = true
+                        }
+
+                        if (uiState.gender.isBlank()) { genderError = "Required"; hasError = true }
+                        if (uiState.birthDate == 0L) { birthDateError = "Required"; hasError = true }
+                        if (uiState.job.isBlank()) { jobError = "Required"; hasError = true }
+                        if (uiState.income.isBlank()) { incomeError = "Required"; hasError = true }
+
+                        if (hasError) {
+                            validationError = "Please check the highlighted fields below."
+                        } else {
+                            showSaveDialog = true
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = FieldShape,
                     enabled = !uiState.isSaving,
@@ -306,13 +435,20 @@ private fun createTempImageUri(context: Context): Uri {
 
 // --- Helpers ---
 @Composable
-private fun EditField(label: String, value: String, onChange: (String) -> Unit) {
+private fun EditField(
+    label: String,
+    value: String,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    onChange: (String) -> Unit,
+) {
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
+            isError = isError,
             modifier = Modifier.fillMaxWidth().height(FieldHeight),
             trailingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFF7A9B00)) },
             shape = FieldShape,
@@ -320,16 +456,28 @@ private fun EditField(label: String, value: String, onChange: (String) -> Unit) 
                 focusedBorderColor = Color.Transparent,
                 unfocusedBorderColor = Color.Transparent,
                 focusedContainerColor = Color(0xFFF5F5F5),
-                unfocusedContainerColor = Color(0xFFF5F5F5)
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                errorBorderColor = MaterialTheme.colorScheme.error,
+                errorContainerColor = Color(0xFFF5F5F5)
             ),
             singleLine = true
         )
+        if (isError && errorMessage != null) {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        }
         Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun DropdownField(label: String, selectedValue: String, options: List<String>, onSelected: (String) -> Unit) {
+private fun DropdownField(
+    label: String,
+    selectedValue: String,
+    options: List<String>,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    onSelected: (String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
@@ -338,6 +486,7 @@ private fun DropdownField(label: String, selectedValue: String, options: List<St
             Card(
                 modifier = Modifier.fillMaxWidth().height(FieldHeight).clickable { expanded = true },
                 shape = FieldShape,
+                border = if (isError) BorderStroke(1.dp, MaterialTheme.colorScheme.error) else null,
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
             ) {
                 Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -353,29 +502,45 @@ private fun DropdownField(label: String, selectedValue: String, options: List<St
                 options.forEach { DropdownMenuItem(text = { Text(it) }, onClick = { onSelected(it); expanded = false }) }
             }
         }
+        if (isError && errorMessage != null) {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        }
         Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun DatePickerField(label: String, value: String, onClick: () -> Unit) {
+private fun DatePickerField(
+    label: String,
+    value: String,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    onClick: () -> Unit
+) {
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = value,
             onValueChange = { },
-            enabled = false,
+            readOnly = true, // Uses readOnly instead of enabled = false to allow error colors
+            isError = isError,
             modifier = Modifier.fillMaxWidth().height(FieldHeight).clickable { onClick() },
             trailingIcon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF7A9B00)) },
             shape = FieldShape,
             colors = OutlinedTextFieldDefaults.colors(
-                disabledBorderColor = Color.Transparent,
-                disabledContainerColor = Color(0xFFF5F5F5),
-                disabledTextColor = Color.Black
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color(0xFFF5F5F5),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                errorBorderColor = MaterialTheme.colorScheme.error,
+                errorContainerColor = Color(0xFFF5F5F5)
             ),
             singleLine = true
         )
+        if (isError && errorMessage != null) {
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        }
         Spacer(Modifier.height(16.dp))
     }
 }
