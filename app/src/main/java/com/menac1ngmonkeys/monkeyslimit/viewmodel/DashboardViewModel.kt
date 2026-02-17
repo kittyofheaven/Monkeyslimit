@@ -55,6 +55,7 @@ class DashboardViewModel(
         { transactions, categories, budgets, currentFilter, user ->
             // 1. Get Current Month & Year
             val calendar = Calendar.getInstance()
+            val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
             val currentMonth = calendar.get(Calendar.MONTH)
             val currentYear = calendar.get(Calendar.YEAR)
 
@@ -66,7 +67,8 @@ class DashboardViewModel(
                 val txCalendar = Calendar.getInstance()
                 txCalendar.time = transaction.date
                 return@filter txCalendar.get(Calendar.MONTH) == currentMonth &&
-                        txCalendar.get(Calendar.YEAR) == currentYear
+                        txCalendar.get(Calendar.YEAR) == currentYear &&
+                        txCalendar.get(Calendar.DAY_OF_MONTH) == currentDay
             }
 
             // Create a fast way to look up categories by their ID

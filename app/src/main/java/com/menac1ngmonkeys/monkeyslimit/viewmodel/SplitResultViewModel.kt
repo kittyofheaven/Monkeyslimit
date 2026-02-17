@@ -8,14 +8,21 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Items
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.MemberItems
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Members
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.SmartSplits
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
+import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
+import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
+import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.ItemsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.MemberItemsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.MembersRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.SmartSplitsRepository
+import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.state.SmartSplitDraft
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +32,6 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import androidx.core.net.toUri
 
-// ... (Keep MemberSplitDetail and MemberItemDetail data classes here) ...
 data class MemberSplitDetail(
     val memberName: String,
     val items: List<MemberItemDetail>,
@@ -42,6 +48,8 @@ data class MemberItemDetail(val itemName: String, val splitPrice: Double)
 data class SplitResultUiState(
     val draft: SmartSplitDraft? = null,
     val memberDetails: List<MemberSplitDetail> = emptyList(),
+    val categories: List<Categories> = emptyList(), // <-- Added Real Categories
+    val budgets: List<Budgets> = emptyList(),       // <-- Added Real Budgets
     val isLoading: Boolean = false,
     val isSaving: Boolean = false
 )
@@ -50,11 +58,28 @@ class SplitResultViewModel(
     private val smartSplitsRepository: SmartSplitsRepository,
     private val membersRepository: MembersRepository,
     private val itemsRepository: ItemsRepository,
-    private val memberItemsRepository: MemberItemsRepository
+    private val memberItemsRepository: MemberItemsRepository,
+    private val transactionsRepository: TransactionsRepository,
+    private val categoriesRepository: CategoriesRepository, // <-- Injected Category Repo
+    private val budgetsRepository: BudgetsRepository        // <-- Injected Budget Repo
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SplitResultUiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        // Fetch Categories and Budgets immediately when the ViewModel is created
+        viewModelScope.launch {
+            categoriesRepository.getCategoriesByType(TransactionType.EXPENSE).collect { cats ->
+                _uiState.update { it.copy(categories = cats) }
+            }
+        }
+        viewModelScope.launch {
+            budgetsRepository.getAllBudgets().collect { buds ->
+                _uiState.update { it.copy(budgets = buds) }
+            }
+        }
+    }
 
     fun initializeWithDraft(draft: SmartSplitDraft) {
         if (_uiState.value.draft != null) return
@@ -97,8 +122,12 @@ class SplitResultViewModel(
         }
     }
 
-    // 2. Commit to Database
-    fun saveToDatabase(context: Context, onSuccess: () -> Unit) {
+    fun saveToDatabase(
+        context: Context,
+        categoryId: Int = 1,
+        budgetId: Int? = null,
+        onSuccess: () -> Unit
+    ) {
         val draft = _uiState.value.draft ?: return
         _uiState.update { it.copy(isSaving = true) }
 
@@ -115,7 +144,7 @@ class SplitResultViewModel(
                 id = 0,
                 name = draft.splitName,
                 amountOwed = draft.total,
-                imagePath = permanentImagePath, // Save the MediaStore URI
+                imagePath = permanentImagePath,
                 tax = draft.tax,
                 service = draft.service,
                 discount = draft.discount,
@@ -169,12 +198,28 @@ class SplitResultViewModel(
                 }
             }
 
+            // E. Save "You" using the provided dialog categories!
+            val youDetail = _uiState.value.memberDetails.find { it.memberName.equals("You", ignoreCase = true) }
+            if (youDetail != null && youDetail.totalOwed > 0) {
+                val userTransaction = Transactions(
+                    id = 0,
+                    userId = "",
+                    totalAmount = youDetail.totalOwed,
+                    note = "Smart Split: ${draft.splitName}",
+                    date = Date(),
+                    type = TransactionType.EXPENSE,
+                    categoryId = categoryId,
+                    imagePath = null,
+                    budgetId = budgetId
+                )
+                transactionsRepository.insert(userTransaction)
+            }
+
             _uiState.update { it.copy(isSaving = false) }
             launch(Dispatchers.Main) { onSuccess() }
         }
     }
 
-    // UPDATED: Saves to "Pictures/MonkeysLimit" using MediaStore
     private fun saveImageToGallery(context: Context, cacheUriString: String): String? {
         try {
             val cacheUri = cacheUriString.toUri()
@@ -204,7 +249,7 @@ class SplitResultViewModel(
                 resolver.update(uri, contentValues, null, null)
             }
 
-            return uri.toString() // Returns content://media/external/...
+            return uri.toString()
         } catch (e: Exception) {
             e.printStackTrace()
             return null

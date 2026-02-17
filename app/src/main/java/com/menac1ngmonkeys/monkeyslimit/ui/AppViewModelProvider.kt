@@ -48,7 +48,7 @@ object AppViewModelProvider {
                 transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
                 categoriesRepository = monkeysLimitApplication().container.categoriesRepository,
                 budgetsRepository = monkeysLimitApplication().container.budgetsRepository,
-                monkeysLimitApplication().container.usersRepository
+                usersRepository = monkeysLimitApplication().container.usersRepository
             )
         }
         // Initializer for AppViewModel
@@ -115,7 +115,10 @@ object AppViewModelProvider {
                 smartSplitsRepository = monkeysLimitApplication().container.smartSplitsRepository,
                 membersRepository = monkeysLimitApplication().container.membersRepository,
                 itemsRepository = monkeysLimitApplication().container.itemsRepository,
-                memberItemsRepository = monkeysLimitApplication().container.memberItemsRepository
+                memberItemsRepository = monkeysLimitApplication().container.memberItemsRepository,
+                transactionsRepository = monkeysLimitApplication().container.transactionsRepository,
+                categoriesRepository = monkeysLimitApplication().container.categoriesRepository,
+                budgetsRepository = monkeysLimitApplication().container.budgetsRepository
             )
         }
         // Initializer for SelectMemberViewModel

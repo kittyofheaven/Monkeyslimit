@@ -123,18 +123,33 @@ fun IncomeExpenseLineChart(
     )
 
     // Range Provider (Autoscale Y-Axis)
+    // Range Provider (Autoscale Y-Axis to Even Thousands)
     val rangeProvider = remember {
         object : CartesianLayerRangeProvider {
             override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = minX
             override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = maxX
 
-            // Fix: Start Y at 0
+            // Start Y at 0
             override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore) = 0.0
 
             override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
                 val safeMax = if (maxY <= 0.0001) 1.0 else maxY
-                // Add 10% padding to top so marker doesn't get cut off
-                return safeMax * 1.1
+
+                // 5 labels means there are exactly 4 spaces (intervals) between them
+                val rawInterval = safeMax / 4.0
+
+                // Find the nearest thousand for the interval, rounded up
+                val intervalInThousands = kotlin.math.ceil(rawInterval / 1000.0).toLong()
+
+                // Force the interval to be an EVEN number in thousands (e.g., 2k, 4k, 6k)
+                val evenInterval = if (intervalInThousands % 2L == 0L) {
+                    if (intervalInThousands == 0L) 2L else intervalInThousands
+                } else {
+                    intervalInThousands + 1L
+                }
+
+                // The new max Y is exactly 4 perfectly even intervals!
+                return (evenInterval * 1000.0) * 4
             }
         }
     }
@@ -200,6 +215,10 @@ fun IncomeExpenseLineChart(
     val startAxis = VerticalAxis.rememberStart(
         // Label Text Color
         label = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
+
+        // ADD THIS LINE: Limits the Y-axis to exactly 5 labels
+        itemPlacer = remember { VerticalAxis.ItemPlacer.count({ 5 }) },
+
         valueFormatter = { _, y, _ ->
             val label = compactNumber(y)
             if (label.isBlank()) " " else label
