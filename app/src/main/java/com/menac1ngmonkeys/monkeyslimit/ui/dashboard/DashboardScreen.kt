@@ -6,29 +6,27 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
@@ -87,29 +85,29 @@ fun DashboardScreenContent(
     // 3. Extract details using the CACHED notification (not the actively changing state)
     val notif = cachedNotification ?: DashboardNotification.None
 
-    val (bgColor, iconColor, icon, title, message) = when (notif) {
+    val (bgColor, iconColor, iconId, title, message) = when (notif) {
         is DashboardNotification.Alert -> NotificationStyle(
             bgColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
             iconColor = MaterialTheme.colorScheme.tertiary,
-            icon = Icons.Default.Warning,
+            iconId = R.drawable.negative_2,
             title = notif.title,
             message = notif.message
         )
         is DashboardNotification.Warning -> NotificationStyle(
             bgColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f),
             iconColor = MaterialTheme.colorScheme.tertiary,
-            icon = Icons.Default.Warning,
+            iconId = R.drawable.negative_1,
             title = notif.title,
             message = notif.message
         )
         is DashboardNotification.Achievement -> NotificationStyle(
             bgColor = MaterialTheme.colorScheme.primaryContainer.lighten(0.2f),
             iconColor = MaterialTheme.colorScheme.primary,
-            icon = Icons.Default.EmojiEvents,
+            iconId = R.drawable.positive_4,
             title = notif.title,
             message = notif.message
         )
-        else -> NotificationStyle(Color.White, Color.Gray, Icons.Default.Done, "", "")
+        else -> NotificationStyle(Color.White, Color.Gray, 0, "", "")
     }
 
     // 4. It's visible ONLY if it's not "None" AND the user hasn't dismissed it
@@ -147,7 +145,7 @@ fun DashboardScreenContent(
                         NotificationCard(
                             backgroundColor = bgColor,
                             iconColor = iconColor,
-                            icon = icon,
+                            imageId = iconId,
                             title = title,
                             message = message,
                             onClose = {
@@ -226,7 +224,7 @@ fun DashboardScreenContent(
 data class NotificationStyle(
     val bgColor: Color,
     val iconColor: Color,
-    val icon: ImageVector,
+    val iconId: Int,
     val title: String,
     val message: String
 )
@@ -235,7 +233,7 @@ data class NotificationStyle(
 fun NotificationCard(
     backgroundColor: Color,
     iconColor: Color,
-    icon: ImageVector,
+    imageId: Int,
     title: String,
     message: String,
     onClose: () -> Unit
@@ -255,14 +253,13 @@ fun NotificationCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.8f), CircleShape),
+                    .size(40.dp),
+//                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
+                Image(
+                    painter = painterResource(id = imageId),
                     contentDescription = null,
-                    tint = iconColor
                 )
             }
 

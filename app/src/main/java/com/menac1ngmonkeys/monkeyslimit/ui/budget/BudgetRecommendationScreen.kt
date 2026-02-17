@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -108,8 +109,21 @@ fun BudgetRecommendationScreen(
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
-            title = { Text("Apply Budget Plan?") },
-            text = { Text("This will add these categories to your budget list. You can edit them later.") },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Apply Budget Plan?",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "This will add these categories to your budget list. You can edit them later.",
+                    color = Color.DarkGray
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -118,10 +132,12 @@ fun BudgetRecommendationScreen(
                             onNavigateBack()
                         }
                     }
-                ) { Text("Confirm") }
+                ) { Text("Confirm", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
             }
         )
     }
