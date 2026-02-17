@@ -30,6 +30,7 @@ import com.menac1ngmonkeys.monkeyslimit.viewmodel.SplitResultViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SplitResultScreen(
     navController: NavController,
@@ -38,6 +39,22 @@ fun SplitResultScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // Dialog States
+    var showTransactionDialog by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf("") }
+    var selectedBudget by remember { mutableStateOf("None") }
+
+    // Map DB items to Strings for the dropdown
+    val categoryOptions = uiState.categories.map { it.name }
+    val budgetOptions = listOf("None") + uiState.budgets.map { it.name }
+
+    // Automatically set the first category as default once loaded
+    LaunchedEffect(uiState.categories) {
+        if (selectedCategory.isEmpty() && uiState.categories.isNotEmpty()) {
+            selectedCategory = uiState.categories.first().name
+        }
+    }
 
     LaunchedEffect(Unit) {
         val draft = navController.previousBackStackEntry
@@ -49,7 +66,75 @@ fun SplitResultScreen(
         }
     }
 
-    // Use Box instead of Scaffold to remove reserved top bar space
+    val youDetail = uiState.memberDetails.find { it.memberName.equals("You", ignoreCase = true) }
+
+    // --- TRANSACTION CATEGORY DIALOG ---
+    if (showTransactionDialog && youDetail != null) {
+        AlertDialog(
+            onDismissRequest = { showTransactionDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    text = "Save Your Transaction",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        text = "You owe ${formatCurrency(youDetail.totalOwed)}. Where should this be categorized?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    // Real Category Dropdown
+                    if (categoryOptions.isNotEmpty()) {
+                        SimpleDropdown(
+                            label = "Category",
+                            selectedValue = selectedCategory,
+                            options = categoryOptions,
+                            onSelect = { selectedCategory = it }
+                        )
+                    }
+
+                    // Real Budget Dropdown
+                    SimpleDropdown(
+                        label = "Budget (Optional)",
+                        selectedValue = selectedBudget,
+                        options = budgetOptions,
+                        onSelect = { selectedBudget = it }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showTransactionDialog = false
+
+                    // Match the selected text back to the actual DB ID
+                    val catObj = uiState.categories.find { it.name == selectedCategory }
+                    val catId = catObj?.id ?: 1 // Default to 1 if something goes wrong
+
+                    val budObj = uiState.budgets.find { it.name == selectedBudget }
+                    val budId = budObj?.id // Automatically null if "None" is selected
+
+                    viewModel.saveToDatabase(
+                        context = context,
+                        categoryId = catId,
+                        budgetId = budId,
+                        onSuccess = onNavigateHome
+                    )
+                }) {
+                    Text("Save Split")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTransactionDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -64,7 +149,6 @@ fun SplitResultScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
-                // Add bottom padding so the last item isn't hidden behind the button
                 contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -89,10 +173,14 @@ fun SplitResultScreen(
             }
         }
 
-        // Bottom Button aligned to the bottom of the Box
+        // Bottom Button
         Button(
             onClick = {
-                viewModel.saveToDatabase(context, onSuccess = onNavigateHome)
+                if (youDetail != null && youDetail.totalOwed > 0) {
+                    showTransactionDialog = true
+                } else {
+                    viewModel.saveToDatabase(context, onSuccess = onNavigateHome)
+                }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -110,6 +198,43 @@ fun SplitResultScreen(
     }
 }
 
+// --- Helper Composable for Clean Dropdowns inside the Dialog ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimpleDropdown(label: String, selectedValue: String, options: List<String>, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selectedValue,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun MemberBillCard(detail: MemberSplitDetail) {
     var expanded by remember { mutableStateOf(false) }
@@ -117,7 +242,8 @@ fun MemberBillCard(detail: MemberSplitDetail) {
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded }
@@ -127,7 +253,7 @@ fun MemberBillCard(detail: MemberSplitDetail) {
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color.LightGray, CircleShape),
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

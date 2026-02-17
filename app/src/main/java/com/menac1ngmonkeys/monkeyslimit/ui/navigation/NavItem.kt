@@ -35,7 +35,7 @@ sealed class NavItem (
 
     object BudgetRecommendation : NavItem(
         route = "budget_recommendation",
-        title = "AI Plan",
+        title = "Budget Plan",
         iconId = 0,
         showBottomBar = false,
         showTopBar = true

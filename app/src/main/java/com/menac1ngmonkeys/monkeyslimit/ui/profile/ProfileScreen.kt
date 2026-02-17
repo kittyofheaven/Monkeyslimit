@@ -217,7 +217,7 @@ private fun TopBar(onBack: () -> Unit) {
 /* ---------------- HEADER ---------------- */
 
 @Composable
-private fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
+fun ProfileHeader(uiState: ProfileUiState, onEditClick: () -> Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -334,7 +334,7 @@ private fun SettingToggle(
 /* ---------------- LIST ITEM ---------------- */
 
 @Composable
-private fun SettingItem(
+fun SettingItem(
     icon: ImageVector,
     title: String,
     onClick: () -> Unit

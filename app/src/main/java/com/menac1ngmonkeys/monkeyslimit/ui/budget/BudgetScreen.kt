@@ -464,7 +464,7 @@ fun ActionButtons(
             shape = RoundedCornerShape(25.dp)
         ) {
             Text(
-                text = "AI Recommendation",
+                text = "Budget Recommendation",
                 fontWeight = FontWeight.SemiBold
             )
         }

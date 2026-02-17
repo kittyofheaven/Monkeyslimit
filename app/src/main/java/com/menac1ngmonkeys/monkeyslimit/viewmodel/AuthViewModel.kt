@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Date
 
@@ -246,18 +247,22 @@ class AuthViewModel(
                         // 1. SEND THE VERIFICATION EMAIL
                         currentUser.sendEmailVerification().addOnCompleteListener { verifyTask ->
                             if (verifyTask.isSuccessful) {
-                                // 2. Save user data to Room/Firestore as usual
-                                saveUserToBoth(user)
+                                // Launch a coroutine so we can use our new 'suspend' function
+                                viewModelScope.launch(Dispatchers.IO) {
 
-                                // 3. Sign them out immediately so they can't access the app yet
-                                auth.signOut()
+                                    // 2. Save user data to Room/Firestore and WAIT for it to finish
+                                    saveUserToBoth(user)
 
-                                // 4. Update the UI to show a success message (using the error dialog)
-                                _uiState.update {
-                                    it.copy(
-                                        isLoading = false,
-                                        error = "Success! Please check your email inbox and click the verification link before logging in."
-                                    )
+                                    // 3. Data is safely in Firestore! NOW we can sign out without causing errors.
+                                    auth.signOut()
+
+                                    // 4. Update the UI to show a success message
+                                    _uiState.update {
+                                        it.copy(
+                                            isLoading = false,
+                                            error = "Success! Please check your email inbox and click the verification link before logging in."
+                                        )
+                                    }
                                 }
                             } else {
                                 _uiState.update {
@@ -376,22 +381,21 @@ class AuthViewModel(
         }
     }
 
-    private fun saveUserToBoth(user: User) {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Upload to Cloud
-            firestore.collection("users").document(user.uid).set(user.copy(isSynced = true))
-                .addOnSuccessListener {
-                    // Success -> Mark Local as Synced
-                    viewModelScope.launch(Dispatchers.IO) {
-                        usersRepository.saveUser(user.copy(isSynced = true))
-                    }
-                }
-                .addOnFailureListener {
-                    // Fail -> Keep Local as Unsynced (Sync will retry later)
-                    viewModelScope.launch(Dispatchers.IO) {
-                        usersRepository.saveUser(user.copy(isSynced = false))
-                    }
-                }
+    // Notice the 'suspend' keyword
+    private suspend fun saveUserToBoth(user: User) {
+        try {
+            // 1. Upload to Cloud and WAIT for it to finish completely
+            firestore.collection("users").document(user.uid)
+                .set(user.copy(isSynced = true))
+                .await() // <-- This is the magic word! It pauses here until success or failure.
+
+            // 2. If we reach this line, Firestore succeeded. Mark Local as Synced.
+            usersRepository.saveUser(user.copy(isSynced = true))
+
+        } catch (e: Exception) {
+            // 3. If Firestore fails (e.g., no internet), it throws an exception.
+            // Catch it and save locally as Unsynced.
+            usersRepository.saveUser(user.copy(isSynced = false))
         }
     }
 
