@@ -51,7 +51,7 @@ fun SplashScreenContent() {
                 Text(
                     text = "LIMIT",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color(0xFFF9E3B6),
+                    color = Color(0xFFFACF69),
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp
                 )

@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,9 @@ fun AuthInputField(
     readOnly: Boolean = false,
     enabled: Boolean = true,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    trailingIcon: @Composable (() -> Unit)? = null
+    trailingIcon: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -57,14 +60,27 @@ fun AuthInputField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(label),
             shape = RoundedCornerShape(25.dp),
             readOnly = readOnly,
             enabled = enabled,
+            isError = isError,
             visualTransformation = visualTransformation,
             trailingIcon = trailingIcon,
             colors = authTextFieldColors()
         )
+
+        // NEW: Show error message below the field
+        if (isError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
     }
 }
 
@@ -77,7 +93,9 @@ fun AuthDropdownField(
     options: List<String>,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -89,6 +107,7 @@ fun AuthDropdownField(
                 value = selectedValue,
                 onValueChange = {},
                 readOnly = true,
+                isError = isError,
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(
@@ -114,6 +133,14 @@ fun AuthDropdownField(
                     )
                 }
             }
+        }
+        if (isError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
         }
     }
 }
