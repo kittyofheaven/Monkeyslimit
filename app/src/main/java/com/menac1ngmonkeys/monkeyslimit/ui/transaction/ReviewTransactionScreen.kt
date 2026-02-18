@@ -42,6 +42,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeyLoadingScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysTimePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
+import com.menac1ngmonkeys.monkeyslimit.utils.CurrencyVisualTransformation
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewItemUi
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ReviewTransactionViewModel
 import java.text.NumberFormat
@@ -562,11 +563,18 @@ fun TransactionItemDialog(
                 )
                 OutlinedTextField(
                     value = priceStr,
-                    onValueChange = { priceStr = it; isPriceError = false },
+                    onValueChange = { newValue ->
+                        val cleanText = newValue.replace(Regex("[^0-9.,]"), "").replace('.', ',')
+                        val parts = cleanText.split(',')
+                        priceStr = if (parts.size > 1) "${parts[0]},${parts[1]}" else parts[0]
+
+                        isPriceError = false
+                    },
                     label = { Text("Price") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     isError = isPriceError,
+                    visualTransformation = CurrencyVisualTransformation(),
                     supportingText = if (isPriceError) { { Text("Must be > 0", color = MaterialTheme.colorScheme.error) } } else null,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,

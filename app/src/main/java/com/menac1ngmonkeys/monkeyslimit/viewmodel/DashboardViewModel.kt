@@ -224,7 +224,7 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(),
-        category = realCategory.name,
+        category = realCategory.name.substringBefore(" "),
         amount = this.totalAmount,
         isExpense = isExpense
     )

@@ -303,25 +303,31 @@ fun EditProfileScreen(
                     label = "Name",
                     value = uiState.name,
                     isError = nameError != null,
-                    errorMessage = nameError
-                ) { viewModel.updateName(it); nameError = null }
+                    errorMessage = nameError,
+                    onChange = { viewModel.updateName(it); nameError = null },
+                    readOnly = false
+                )
 
                 EditField(
                     label = "Email Address",
                     value = uiState.email,
                     isError = emailError != null,
-                    errorMessage = emailError
-                ) { viewModel.updateEmail(it); emailError = null }
+                    errorMessage = emailError,
+                    onChange = { viewModel.updateEmail(it); emailError = null },
+                    readOnly = true
+                )
 
                 EditField(
                     label = "Phone Number",
                     value = uiState.mobileNumber,
                     isError = mobileError != null,
-                    errorMessage = mobileError
-                ) {
-                    viewModel.updatePhone(it.filter { c -> c.isDigit() || c == '+' }.take(15))
-                    mobileError = null
-                }
+                    errorMessage = mobileError,
+                    onChange = {
+                        viewModel.updatePhone(it.filter { c -> c.isDigit() || c == '+' }.take(15))
+                        mobileError = null
+                    },
+                    readOnly = false
+                )
 
                 DropdownField(
                     label = "Gender",
@@ -441,6 +447,7 @@ private fun EditField(
     isError: Boolean = false,
     errorMessage: String? = null,
     onChange: (String) -> Unit,
+    readOnly: Boolean = false,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
@@ -450,6 +457,7 @@ private fun EditField(
             onValueChange = onChange,
             isError = isError,
             modifier = Modifier.fillMaxWidth().height(FieldHeight),
+            readOnly = readOnly,
             trailingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFF7A9B00)) },
             shape = FieldShape,
             colors = OutlinedTextFieldDefaults.colors(

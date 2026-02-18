@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +33,7 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysTimePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
+import com.menac1ngmonkeys.monkeyslimit.utils.CurrencyVisualTransformation
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ManualTransactionViewModel
 import java.util.Date
 
@@ -165,14 +167,20 @@ fun ManualTransactionContent(
             // 4. Amount Input (Custom Transparent Style)
             TransparentTextField(
                 value = amount,
-                onValueChange = {
-                    amount = it
+                onValueChange = { newValue ->
+                    // Keep digits and at most ONE decimal point.
+                    // Converts '.' to ',' for standard Indonesian format
+                    val cleanText = newValue.replace(Regex("[^0-9.,]"), "").replace('.', ',')
+                    val parts = cleanText.split(',')
+                    amount = if (parts.size > 1) "${parts[0]},${parts[1]}" else parts[0]
+
                     isAmountError = false
                 },
                 label = "Amount",
                 prefix = "Rp.",
                 keyboardType = KeyboardType.Number,
-                isError = isAmountError
+                isError = isAmountError,
+                visualTransformation = CurrencyVisualTransformation()
             )
             if (isAmountError) {
                 Text("Amount must be greater than 0", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
@@ -281,7 +289,8 @@ fun TransparentTextField(
     placeholder: String = "",
     prefix: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
-    isError: Boolean = false
+    isError: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -322,6 +331,7 @@ fun TransparentTextField(
                     ),
                     keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                     singleLine = true,
+                    visualTransformation = visualTransformation,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
