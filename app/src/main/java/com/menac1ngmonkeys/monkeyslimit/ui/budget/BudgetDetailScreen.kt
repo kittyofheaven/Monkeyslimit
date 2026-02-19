@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -174,7 +175,7 @@ fun BudgetDetailScreenContent(
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.Top
         ) {
             // Header: Budget Info
             item {
@@ -183,6 +184,8 @@ fun BudgetDetailScreenContent(
                     onClick = {  }
                 )
             }
+
+            item { Spacer(Modifier.size(16.dp)) }
 
             // Sub-header
             if (uiState.relatedTransactions.isNotEmpty()) {
@@ -195,11 +198,15 @@ fun BudgetDetailScreenContent(
                 }
             }
 
+            item { Spacer(Modifier.size(16.dp)) }
+
             // Transaction List
             items(uiState.relatedTransactions) { transaction ->
                 TransactionRow(
                     transaction = transaction,
-                    onClick = { onTransactionClick(transaction.id) }
+                    onClick = { onTransactionClick(transaction.id) },
+                    category = transaction.category.substringBefore(" "),
+                    subtitle = transaction.subtitle
                 )
             }
         }

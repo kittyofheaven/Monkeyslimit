@@ -1,30 +1,31 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.dashboard
 
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
@@ -32,131 +33,147 @@ import androidx.compose.ui.unit.dp
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MarqueeText
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
+import com.menac1ngmonkeys.monkeyslimit.ui.theme.lighten
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
-
-// Add this new composable to your DashboardScreen.kt file
 
 @Composable
 fun TransactionRow(
     transaction: TransactionItemData,
     modifier: Modifier = Modifier,
     onClick: (Int) -> Unit = {},
+    category: String = transaction.category,
+    subtitle: String = transaction.subtitle
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick(transaction.id) }
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 1. Icon with background
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(30)) // Creates the rounded square look
-                .background(
-                    MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = 0.1f
-                    )
-                ),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable { onClick(transaction.id) }
+                .padding(vertical = 12.dp, horizontal = 8.dp), // Added slight padding for breathing room
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                modifier = Modifier.size(30.dp),
-                painter = painterResource(id = transaction.iconResId),
-                contentDescription = transaction.title,
-                // In dark mode, primary is Orange, in light mode, it's Green.
-                // Use secondary in light mode if you always want yellow/orange.
-                tint = MaterialTheme.colorScheme.onSurface
-            )
+            // 1. Icon with circular background
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape) // Changed to perfect circle like the image
+                    .background(
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = 0.08f // Slightly lighter alpha for cleaner look
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    modifier = Modifier.size(24.dp),
+                    painter = painterResource(id = transaction.iconResId),
+                    contentDescription = transaction.title,
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // 2. Middle Section: Title and Subtitle (Combined category & time)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                MarqueeText(
+                    text = transaction.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = TextUnit(15f, TextUnitType.Sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(Modifier.height(2.dp))
+
+                // Combined Category and Subtitle (e.g., "Subscription, 06:20 PM")
+                Text(
+                    text = "$category, $subtitle",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = TextUnit(12f, TextUnitType.Sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // 3. Right Section: Amount and Type Label
+            val amountColor = if (transaction.isExpense) {
+                MaterialTheme.colorScheme.tertiary
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+
+            // Target image uses explicit "+" for income
+            val amountPrefix = if (transaction.isExpense) "-" else "+"
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "$amountPrefix${transaction.amount.toRupiahFormat()}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = amountColor,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.End
+                )
+
+                Spacer(Modifier.height(2.dp))
+
+                // Bottom Right Label (e.g., "Expense" or "Income")
+                Text(
+                    text = if (transaction.isExpense) "Expense" else "Income",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = TextUnit(12f, TextUnitType.Sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End
+                )
+            }
         }
-
-        Spacer(Modifier.width(16.dp))
-
-        // 2. Title and Subtitle
-        Column(
-            modifier = Modifier
-                .weight(1f)
-            ,
-
-        ) {
-            MarqueeText(
-                text = transaction.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontSize = TextUnit(15f, TextUnitType.Sp),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = transaction.subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                fontSize = TextUnit(10f, TextUnitType.Sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        VerticalDivider(
-            modifier = Modifier
-                .height(24.dp)
-                .padding(horizontal = 4.dp)
-            ,
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        )
-
-        // 3. Category
-        MarqueeText(
-            text = transaction.category,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .padding(horizontal = 4.dp)
-                .weight(0.7f),
-//            textAlign = TextAlign.Center
-        )
-
-        VerticalDivider(
-            modifier = Modifier
-                .height(24.dp)
-                .padding(horizontal = 4.dp),
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        )
-
-        // 4. Amount
-        val amountColor = if (transaction.isExpense) {
-            MaterialTheme.colorScheme.tertiary // This is your Red color
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        }
-        val amountPrefix = if (transaction.isExpense) "-" else ""
-
-        Text(
-            text = "$amountPrefix${transaction.amount.toRupiahFormat()}",
-            style = MaterialTheme.typography.labelLarge.copy(),
-            color = amountColor,
-            textAlign = TextAlign.End,
-            modifier = Modifier.width(100.dp) // Give it a fixed width to align amounts
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.onSurface.copy(0.2f),
+            thickness = 1.dp
         )
     }
 }
 
-@Preview(
-    showBackground = true,
-//    uiMode = androidx.work.Configuration.UI_MODE_NIGHT_YES,
-)
+@Preview(showBackground = true)
 @Composable
 fun TransactionRowPreview() {
     MonkeyslimitTheme {
-        TransactionRow(
-            transaction = TransactionItemData(
-                id = 0,
-                iconResId = R.drawable.food,
-                title = "Groceries",
-                subtitle = "17:00 - April 24",
-                category = "Pantry",
-                amount = 100000.0,
-                isExpense = true,
+        Column {
+            TransactionRow(
+                transaction = TransactionItemData(
+                    id = 0,
+                    iconResId = R.drawable.food,
+                    title = "Google One Subscription",
+                    subtitle = "06:20 PM",
+                    category = "Subscription",
+                    amount = 48700.0,
+                    isExpense = true,
+                )
             )
-        )
+            TransactionRow(
+                transaction = TransactionItemData(
+                    id = 1,
+                    iconResId = R.drawable.food, // replace with a briefcase icon
+                    title = "Freelance UI Kit",
+                    subtitle = "04:08 PM",
+                    category = "Work",
+                    amount = 1930000.0,
+                    isExpense = false,
+                )
+            )
+        }
     }
 }

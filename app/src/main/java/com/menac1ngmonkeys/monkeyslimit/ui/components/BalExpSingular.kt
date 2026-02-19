@@ -17,9 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.menac1ngmonkeys.monkeyslimit.utils.compactNumber
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 
@@ -41,20 +40,18 @@ fun BalExpSingular(
     val prefix = if (isExpense) "-" else ""
     // --- End of logic ---
 
-    val isHundredMillionPlus = balExpData.amount >= 100_000_000
-    val isTenMillionPlus = balExpData.amount >= 10_000_000
+    // Use .0 to ensure these are evaluated as Doubles to safely handle up to Trillions
+    val amountValue = balExpData.amount
+    val isHundredMillionPlus = amountValue >= 100_000_000.0
+    val isTenMillionPlus = amountValue >= 10_000_000.0
 
     Column(
-        modifier = Modifier
-            .width(150.dp)
-//            .padding(5.dp)
-        ,
+        modifier = Modifier.width(150.dp),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
@@ -66,24 +63,29 @@ fun BalExpSingular(
             Spacer(Modifier.width(4.dp))
             Text(
                 text = balExpData.title,
-                fontSize = TextUnit(12f, TextUnitType.Sp),
+                fontSize = 12.sp,
             )
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            text =
-                if (isHundredMillionPlus) {
-                    prefix + balExpData.amount.toRupiahFormat()
-                    "${prefix}Rp${compactNumber(balExpData.amount)}"
-                } else {
-                    prefix + balExpData.amount.toRupiahFormat()
-                },
-            fontSize =
-                if (isTenMillionPlus) {
-                    TextUnit(18f, TextUnitType.Sp)
-                } else {
-                    TextUnit(20f, TextUnitType.Sp)
-                },
+            text = if (amountValue > 1_000_000_000_000_000) {
+                ">1000T"
+            } else if (isHundredMillionPlus) {
+                // E.g. -Rp100M, -Rp10B, -Rp10T
+                "${prefix}Rp${compactNumber(balExpData.amount)}"
+            } else {
+                // E.g. -Rp99.999.999
+                prefix + balExpData.amount.toRupiahFormat()
+            }
+
+            ,
+            fontSize = if (isTenMillionPlus && !isHundredMillionPlus) {
+                // Only shrink font for uncompacted long numbers (10M - 99M)
+                18.sp
+            } else {
+                // Compacted numbers (10T) are short strings, so they fit perfectly at 20.sp!
+                20.sp
+            },
             fontWeight = FontWeight.Bold,
             color = amountColor
         )

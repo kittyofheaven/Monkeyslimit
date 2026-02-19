@@ -1,8 +1,5 @@
 package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -30,18 +27,20 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import kotlin.random.Random
 
 class DashboardViewModel(
     private val transactionsRepository: TransactionsRepository,
     private val categoriesRepository: CategoriesRepository,
     private val budgetsRepository: BudgetsRepository,
-    private val usersRepository: UsersRepository // 1. Added Repository
+    private val usersRepository: UsersRepository
 ) : ViewModel() {
 
     private val _filter = MutableStateFlow(DashboardFilter.ALL)
+    private val _selectedDate = MutableStateFlow(System.currentTimeMillis()) // <-- ADDED
 
-    // Get current user ID to fetch the specific profile
+    // Group the UI states to avoid exceeding the `combine` flow parameter limits
+    private val _uiControlsFlow = combine(_filter, _selectedDate) { filter, date -> Pair(filter, date) }
+
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     val dashboardUiState: StateFlow<DashboardUiState> =
@@ -49,42 +48,51 @@ class DashboardViewModel(
             transactionsRepository.getAllTransactions(),
             categoriesRepository.getAllCategories(),
             budgetsRepository.getAllBudgets(),
-            _filter,
-            usersRepository.getUser(currentUserId) // 2. Add User Flow
+            _uiControlsFlow, // <-- Use the grouped flow here
+            usersRepository.getUser(currentUserId)
         )
-        { transactions, categories, budgets, currentFilter, user ->
-            // 1. Get Current Month & Year
-            val calendar = Calendar.getInstance()
-            val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
-            val currentMonth = calendar.get(Calendar.MONTH)
-            val currentYear = calendar.get(Calendar.YEAR)
+        { transactions, categories, budgets, uiControls, user ->
+            val currentFilter = uiControls.first
+            val selectedDateMillis = uiControls.second
+
+            // 1. Determine Selected Date Info (For the Transaction List)
+            val selectedCalendar = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+            val selDay = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+            val selMonth = selectedCalendar.get(Calendar.MONTH)
+            val selYear = selectedCalendar.get(Calendar.YEAR)
 
             val monthList = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-            val monthStr = monthList[currentMonth]
+            val monthStr = monthList[selMonth]
 
-            // 2. Filter Transactions for Current Month
-            val currentMonthTransactions = transactions.filter { transaction ->
-                val txCalendar = Calendar.getInstance()
-                txCalendar.time = transaction.date
-                return@filter txCalendar.get(Calendar.MONTH) == currentMonth &&
-                        txCalendar.get(Calendar.YEAR) == currentYear &&
-                        txCalendar.get(Calendar.DAY_OF_MONTH) == currentDay
+            // 2. Filter Transactions for the exact Selected Date
+            val selectedDateTransactions = transactions.filter { transaction ->
+                val txCalendar = Calendar.getInstance().apply { time = transaction.date }
+                txCalendar.get(Calendar.MONTH) == selMonth &&
+                        txCalendar.get(Calendar.YEAR) == selYear &&
+                        txCalendar.get(Calendar.DAY_OF_MONTH) == selDay
             }
 
-            // Create a fast way to look up categories by their ID
+            // 3. Filter Transactions for the ENTIRE Month (For Budget Notifications)
+            val todayCalendar = Calendar.getInstance()
+            val currMonth = todayCalendar.get(Calendar.MONTH)
+            val currYear = todayCalendar.get(Calendar.YEAR)
+
+            val currentMonthTransactions = transactions.filter { transaction ->
+                val txCalendar = Calendar.getInstance().apply { time = transaction.date }
+                txCalendar.get(Calendar.MONTH) == currMonth && txCalendar.get(Calendar.YEAR) == currYear
+            }
+
             val categoriesById = categories.associateBy { it.id }
 
-            // 3. Apply Dashboard Filters
+            // 4. Apply Dashboard Filters to the Selected Date
             val filteredTransactions = when (currentFilter) {
-                DashboardFilter.ALL -> currentMonthTransactions
-                DashboardFilter.INCOME -> currentMonthTransactions.filter { it.type == TransactionType.INCOME }
-                DashboardFilter.EXPENSE -> currentMonthTransactions.filter { it.type == TransactionType.EXPENSE }
+                DashboardFilter.ALL -> selectedDateTransactions
+                DashboardFilter.INCOME -> selectedDateTransactions.filter { it.type == TransactionType.INCOME }
+                DashboardFilter.EXPENSE -> selectedDateTransactions.filter { it.type == TransactionType.EXPENSE }
             }
 
-            // 4. Generate Notification with Name
-            // Get first name or default to "Friend" if empty
+            // 5. Generate Notification (Using the entire month's transactions, not just today's!)
             val userName = if (!user?.firstName.isNullOrBlank()) user!!.firstName else "Friend"
-
             val notification = generateNotification(currentMonthTransactions, budgets, userName)
 
             val sortedTransactions = filteredTransactions.sortedByDescending { it.date }
@@ -98,7 +106,8 @@ class DashboardViewModel(
                 recentTransactions = uiTransactionList,
                 currentFilter = currentFilter,
                 currentMonth = monthStr,
-                notification = notification
+                notification = notification,
+                selectedDateMillis = selectedDateMillis // <-- ADDED
             )
         }.stateIn(
             scope = viewModelScope,
@@ -108,6 +117,11 @@ class DashboardViewModel(
 
     fun updateFilter(newFilter: DashboardFilter) {
         _filter.update { newFilter }
+    }
+
+    // <-- ADDED FUNCTION FOR THE DATE SWITCHER -->
+    fun updateDate(dateMillis: Long) {
+        _selectedDate.update { dateMillis }
     }
 }
 
@@ -198,7 +212,7 @@ private fun generateNotification(
         "Stay Strong" to "Financial freedom is available to those who learn about it and work for it."
     )
     val (title, msg) = quotes.random()
-    return DashboardNotification.Achievement("Daily Wisdom", msg) // Using Achievement style for neutral/good quotes
+    return DashboardNotification.Achievement("Daily Wisdom", msg)
 }
 
 private fun Transactions.toTransactionItemData(category: Categories?): TransactionItemData {
@@ -224,7 +238,7 @@ private fun Transactions.toTransactionItemData(category: Categories?): Transacti
         iconResId = icon,
         title = this.note ?: "Transaction",
         subtitle = this.date.toFormattedString(),
-        category = realCategory.name,
+        category = realCategory.name.substringBefore(" "),
         amount = this.totalAmount,
         isExpense = isExpense
     )

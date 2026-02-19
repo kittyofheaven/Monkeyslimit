@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
@@ -29,6 +30,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysTimePicker
+import com.menac1ngmonkeys.monkeyslimit.utils.CurrencyVisualTransformation
+import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.TransactionDetailViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -67,7 +70,8 @@ fun TransactionDetailScreen(
                 showDatePicker = false
                 showTimePicker = true // Proceed to Time Picker
             }
-        }
+        },
+        proceedText = "Next"
     )
 
     // 2. Time Picker
@@ -116,7 +120,6 @@ fun TransactionDetailScreen(
                         viewModel.deleteTransaction(onSuccess = onNavigateBack)
                     },
                     shape = RoundedCornerShape(50.dp),
-                    // Using Red for destructive action, but keeping the exact shape and elevation theme
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
@@ -192,11 +195,23 @@ fun TransactionDetailScreen(
                 ) {
                     // --- AMOUNT ---
                     if (uiState.isEditing) {
+                        // Strips trailing zeroes dynamically for clean UI editing
+                        val displayAmount = uiState.editAmount
+                            .removeSuffix(".0")
+                            .replace('.', ',')
+
                         OutlinedTextField(
                             value = uiState.editAmount,
-                            onValueChange = viewModel::onEditAmountChange,
+                            onValueChange = { newValue ->
+                                val cleanText = newValue.replace(Regex("[^0-9.,]"), "").replace('.', ',')
+                                val parts = cleanText.split(',')
+                                val finalStr = if (parts.size > 1) "${parts[0]},${parts[1]}" else parts[0]
+
+                                viewModel.onEditAmountChange(finalStr)
+                            },
                             label = { Text("Amount") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = CurrencyVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -209,8 +224,9 @@ fun TransactionDetailScreen(
                         val isExpense = transaction.type == TransactionType.EXPENSE
                         val amountColor = if (isExpense) MaterialTheme.colorScheme.error else Color(0xFF4CAF50)
                         val prefix = if (isExpense) "-" else "+"
+
                         Text(
-                            text = "$prefix${formatCurrency(transaction.totalAmount)}",
+                            text = prefix + transaction.totalAmount.toRupiahFormat(),
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.Bold,
                             color = amountColor
@@ -362,6 +378,63 @@ fun TransactionDetailScreen(
                             } else {
                                 val typeLabel = if (transaction.type == TransactionType.EXPENSE) "Expense" else "Income"
                                 DetailRow(Icons.Default.AttachMoney, "Type", typeLabel)
+                            }
+
+                            // BUDGET FIELD (Only visible if the current selected type is EXPENSE)
+                            val isCurrentTypeExpense = if (uiState.isEditing) uiState.editType == TransactionType.EXPENSE else transaction.type == TransactionType.EXPENSE
+
+                            if (isCurrentTypeExpense) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+
+                                if (uiState.isEditing) {
+                                    var budgetExpanded by remember { mutableStateOf(false) }
+                                    // Use uiState.allBudgets and uiState.editBudgetId from your ViewModel
+                                    val selectedBudgetName = uiState.allBudgets.find { it.id == uiState.editBudgetId }?.name ?: "None"
+
+                                    ExposedDropdownMenuBox(
+                                        expanded = budgetExpanded,
+                                        onExpandedChange = { budgetExpanded = it },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        OutlinedTextField(
+                                            value = selectedBudgetName,
+                                            onValueChange = {},
+                                            readOnly = true,
+                                            label = { Text("Budget") },
+                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = budgetExpanded) },
+                                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                focusedLabelColor = MaterialTheme.colorScheme.primary
+                                            )
+                                        )
+                                        ExposedDropdownMenu(
+                                            expanded = budgetExpanded,
+                                            onDismissRequest = { budgetExpanded = false },
+                                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("None") },
+                                                onClick = {
+                                                    viewModel.onEditBudgetChange(null)
+                                                    budgetExpanded = false
+                                                }
+                                            )
+                                            uiState.allBudgets.forEach { budget ->
+                                                DropdownMenuItem(
+                                                    text = { Text(budget.name) },
+                                                    onClick = {
+                                                        viewModel.onEditBudgetChange(budget.id)
+                                                        budgetExpanded = false
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Make sure uiState.budgetName is populated in your ViewModel when loading the transaction!
+                                    DetailRow(Icons.Default.AccountBalanceWallet, "Budget", uiState.budgetName ?: "None")
+                                }
                             }
                         }
                     }

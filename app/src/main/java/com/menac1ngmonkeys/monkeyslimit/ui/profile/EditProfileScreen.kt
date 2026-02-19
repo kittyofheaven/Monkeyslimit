@@ -30,6 +30,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.EditProfileViewModel
 import java.io.File
@@ -143,26 +144,19 @@ fun EditProfileScreen(
     }
 
     // --- DATE PICKER & SAVE DIALOGS ---
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = if (uiState.birthDate != 0L) uiState.birthDate else System.currentTimeMillis()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        viewModel.updateBirthDate(it)
-                        birthDateError = null // Clear error when valid date picked
-                    }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+    MonkeysDatePicker(
+        show = showDatePicker,
+        initialDate = if (uiState.birthDate != 0L) Date(uiState.birthDate) else Date(),
+        disableFutureDates = true, // Restricts selection to Today or earlier
+        onDismiss = { showDatePicker = false },
+        onDateSelected = { selectedMillis ->
+            if (selectedMillis != null) {
+                viewModel.updateBirthDate(selectedMillis)
+                birthDateError = null // Clear error when valid date picked
             }
-        ) { DatePicker(state = datePickerState) }
-    }
+            showDatePicker = false
+        }
+    )
 
     if (showSaveDialog) {
         AlertDialog(
@@ -303,25 +297,31 @@ fun EditProfileScreen(
                     label = "Name",
                     value = uiState.name,
                     isError = nameError != null,
-                    errorMessage = nameError
-                ) { viewModel.updateName(it); nameError = null }
+                    errorMessage = nameError,
+                    onChange = { viewModel.updateName(it); nameError = null },
+                    readOnly = false
+                )
 
                 EditField(
                     label = "Email Address",
                     value = uiState.email,
                     isError = emailError != null,
-                    errorMessage = emailError
-                ) { viewModel.updateEmail(it); emailError = null }
+                    errorMessage = emailError,
+                    onChange = { viewModel.updateEmail(it); emailError = null },
+                    readOnly = true
+                )
 
                 EditField(
                     label = "Phone Number",
                     value = uiState.mobileNumber,
                     isError = mobileError != null,
-                    errorMessage = mobileError
-                ) {
-                    viewModel.updatePhone(it.filter { c -> c.isDigit() || c == '+' }.take(15))
-                    mobileError = null
-                }
+                    errorMessage = mobileError,
+                    onChange = {
+                        viewModel.updatePhone(it.filter { c -> c.isDigit() || c == '+' }.take(15))
+                        mobileError = null
+                    },
+                    readOnly = false
+                )
 
                 DropdownField(
                     label = "Gender",
@@ -441,6 +441,7 @@ private fun EditField(
     isError: Boolean = false,
     errorMessage: String? = null,
     onChange: (String) -> Unit,
+    readOnly: Boolean = false,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
@@ -450,6 +451,7 @@ private fun EditField(
             onValueChange = onChange,
             isError = isError,
             modifier = Modifier.fillMaxWidth().height(FieldHeight),
+            readOnly = readOnly,
             trailingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFF7A9B00)) },
             shape = FieldShape,
             colors = OutlinedTextFieldDefaults.colors(
@@ -520,26 +522,47 @@ private fun DatePickerField(
     Column(Modifier.fillMaxWidth()) {
         Text("$label:", color = Color(0xFF7A9B00), fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = { },
-            readOnly = true, // Uses readOnly instead of enabled = false to allow error colors
-            isError = isError,
-            modifier = Modifier.fillMaxWidth().height(FieldHeight).clickable { onClick() },
-            trailingIcon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF7A9B00)) },
-            shape = FieldShape,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                focusedContainerColor = Color(0xFFF5F5F5),
-                unfocusedContainerColor = Color(0xFFF5F5F5),
-                errorBorderColor = MaterialTheme.colorScheme.error,
-                errorContainerColor = Color(0xFFF5F5F5)
-            ),
-            singleLine = true
-        )
+
+        // 1. Wrap in a Box to allow layering
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { },
+                readOnly = true,
+                isError = isError,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(FieldHeight), // Removed .clickable() from here
+                trailingIcon = { Icon(Icons.Default.DateRange, null, tint = Color(0xFF7A9B00)) },
+                shape = FieldShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = Color(0xFFF5F5F5),
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    errorBorderColor = MaterialTheme.colorScheme.error,
+                    errorContainerColor = Color(0xFFF5F5F5)
+                ),
+                singleLine = true
+            )
+
+            // 2. Add a transparent overlay that matches the size and shape
+            // This sits ON TOP of the text field and captures the click.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(FieldShape)
+                    .clickable { onClick() }
+            )
+        }
+
         if (isError && errorMessage != null) {
-            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+            Text(
+                errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
         }
         Spacer(Modifier.height(16.dp))
     }

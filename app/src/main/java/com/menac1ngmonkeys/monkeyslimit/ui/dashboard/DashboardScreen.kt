@@ -9,10 +9,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
@@ -20,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +34,7 @@ import androidx.navigation.NavController
 import com.menac1ngmonkeys.monkeyslimit.R
 import com.menac1ngmonkeys.monkeyslimit.ui.components.BalanceExpenseCard
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
+import com.menac1ngmonkeys.monkeyslimit.ui.components.MonkeysDatePicker
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AppUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardFilter
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardNotification
@@ -37,6 +42,10 @@ import com.menac1ngmonkeys.monkeyslimit.ui.state.DashboardUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.lighten
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.DashboardViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(
@@ -55,6 +64,10 @@ fun DashboardScreen(
         onFilterSelected = dashboardViewModel::updateFilter,
         onTransactionClick = { transactionId ->
             navController.navigate("transaction_detail/$transactionId")
+        },
+        onDateSelected = { dateMillis ->
+            // TODO: If you update your DashboardViewModel to filter by date, call it here!
+             dashboardViewModel.updateDate(dateMillis)
         }
     )
 }
@@ -65,7 +78,8 @@ fun DashboardScreenContent(
     appUiState: AppUiState,
     dashboardUiState: DashboardUiState,
     onFilterSelected: (DashboardFilter) -> Unit = {},
-    onTransactionClick: (Int) -> Unit = {}
+    onTransactionClick: (Int) -> Unit = {},
+    onDateSelected: (Long) -> Unit = {}
 ) {
     val totalExpense = appUiState.totalExpense
     val totalIncome = appUiState.totalIncome
@@ -76,14 +90,28 @@ fun DashboardScreenContent(
     // 2. Cache the FIRST valid notification so it doesn't change when filters are clicked
     var cachedNotification by remember { mutableStateOf<DashboardNotification?>(null) }
 
+    // --- DATE PICKER & SWITCHER STATES ---
+    var selectedDateMillis by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    val isToday = remember(selectedDateMillis) {
+        val calSelected = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+        val calToday = Calendar.getInstance()
+        calSelected.get(Calendar.YEAR) == calToday.get(Calendar.YEAR) &&
+                calSelected.get(Calendar.DAY_OF_YEAR) == calToday.get(Calendar.DAY_OF_YEAR)
+    }
+
+    val dateLabel = remember(selectedDateMillis, isToday) {
+        if (isToday) SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(selectedDateMillis)) + " - Today"
+        else SimpleDateFormat("EEEE - dd MMM yyyy", Locale.getDefault()).format(Date(selectedDateMillis))
+    }
+
     LaunchedEffect(dashboardUiState.notification) {
-        // Only save it if we haven't saved one yet AND it's a real notification
         if (cachedNotification == null && dashboardUiState.notification !is DashboardNotification.None) {
             cachedNotification = dashboardUiState.notification
         }
     }
 
-    // 3. Extract details using the CACHED notification (not the actively changing state)
     val notif = cachedNotification ?: DashboardNotification.None
 
     val (bgColor, iconColor, iconId, title, message) = when (notif) {
@@ -111,8 +139,22 @@ fun DashboardScreenContent(
         else -> NotificationStyle(Color.White, Color.Gray, 0, "", "")
     }
 
-    // 4. It's visible ONLY if it's not "None" AND the user hasn't dismissed it
     val isNotificationVisible = notif !is DashboardNotification.None && !isNotificationDismissed
+
+    // Use MonkeysDatePicker
+    MonkeysDatePicker(
+        show = showDatePicker,
+        initialDate = Date(selectedDateMillis),
+        onDismiss = { showDatePicker = false },
+        onDateSelected = { dateMillis ->
+            showDatePicker = false
+            if (dateMillis != null) {
+                selectedDateMillis = dateMillis
+                onDateSelected(dateMillis)
+            }
+        },
+        disableFutureDates = true,
+    )
 
     Column(
         modifier = modifier
@@ -136,7 +178,6 @@ fun DashboardScreenContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // --- DYNAMIC NOTIFICATION CARD ---
                 AnimatedVisibility(
                     visible = isNotificationVisible,
                     enter = fadeIn() + expandVertically(),
@@ -149,40 +190,88 @@ fun DashboardScreenContent(
                             imageId = iconId,
                             title = title,
                             message = message,
-                            onClose = {
-                                // Permanently dismiss for this session
-                                isNotificationDismissed = true
-                            }
+                            onClose = { isNotificationDismissed = true }
                         )
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(10.dp))
                     }
                 }
-                // -----------------------------
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // --- NEW VERTICAL HEADER LAYOUT ---
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Today",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                    // Date Switcher Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = {
+                            val cal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+                            cal.add(Calendar.DAY_OF_YEAR, -1)
+                            selectedDateMillis = cal.timeInMillis
+                            onDateSelected(selectedDateMillis)
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "Previous Date",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
+                        // Wrap the Text in a Box that takes up all the remaining middle space
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = dateLabel,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { showDatePicker = true }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (!isToday) {
+                                    val cal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+                                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                                    selectedDateMillis = cal.timeInMillis
+                                    onDateSelected(selectedDateMillis)
+                                }
+                            },
+                            enabled = !isToday
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Next Date",
+                                // Hides the arrow seamlessly when it's today
+                                tint = if (isToday) Color.Transparent else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Filters Row
                     DashboardFilterRow(
                         currentFilter = dashboardUiState.currentFilter,
-                        onFilterSelected = onFilterSelected
+                        onFilterSelected = onFilterSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     )
                 }
 
                 Spacer(Modifier.size(8.dp))
 
                 if (dashboardUiState.recentTransactions.isEmpty()) {
-                    // Determine the specific message based on the active filter
                     val emptyMessage = when (dashboardUiState.currentFilter) {
                         DashboardFilter.INCOME -> "No income yet."
                         DashboardFilter.EXPENSE -> "No expenses yet."
@@ -192,7 +281,7 @@ fun DashboardScreenContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f), // Take up remaining space
+                            .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -206,13 +295,15 @@ fun DashboardScreenContent(
                         modifier = Modifier
                             .fillMaxHeight()
                             .fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(dashboardUiState.recentTransactions) { transaction ->
                             TransactionRow(
                                 transaction = transaction,
                                 onClick = onTransactionClick,
+                                subtitle = transaction.subtitle.substringBefore(" ")
                             )
                         }
                     }
@@ -222,7 +313,6 @@ fun DashboardScreenContent(
     }
 }
 
-// Helper data class for style extraction
 data class NotificationStyle(
     val bgColor: Color,
     val iconColor: Color,
@@ -254,9 +344,7 @@ fun NotificationCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier
-                    .size(40.dp),
-//                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
+                modifier = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -297,14 +385,16 @@ fun NotificationCard(
     }
 }
 
+// Added horizontalArrangement parameter to allow centering the chips
 @Composable
 fun DashboardFilterRow(
     modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
     currentFilter: DashboardFilter,
     onFilterSelected: (DashboardFilter) -> Unit
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = horizontalArrangement,
         modifier = modifier
     ) {
         FilterChipItem(

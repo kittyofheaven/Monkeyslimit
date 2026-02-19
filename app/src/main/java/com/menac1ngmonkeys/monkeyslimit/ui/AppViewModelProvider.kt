@@ -201,7 +201,8 @@ class TransactionDetailViewModelFactory(private val transactionId: Int) : ViewMo
             return TransactionDetailViewModel(
                 transactionId = transactionId,
                 transactionsRepository = container.transactionsRepository,
-                categoriesRepository = container.categoriesRepository
+                categoriesRepository = container.categoriesRepository,
+                budgetsRepository = container.budgetsRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

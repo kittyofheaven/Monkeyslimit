@@ -18,6 +18,7 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +27,7 @@ import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import java.util.Calendar
 import java.util.Date
+import java.util.TimeZone
 
 // Matches colors from AuthComponents.kt
 private val AuthPrimaryGreen = Color(0xFF6C8B08)
@@ -43,13 +46,45 @@ private val AuthCardBg = Color(0xFFF9F9F9)
 fun MonkeysDatePicker(
     show: Boolean,
     initialDate: Date,
+    disableFutureDates: Boolean = false,
     onDismiss: () -> Unit,
-    onDateSelected: (Long?) -> Unit
+    onDateSelected: (Long?) -> Unit,
+    proceedText: String = "OK"
 ) {
     if (!show) return
 
+    // Create the logic to restrict dates
+    val selectableDates = remember(disableFutureDates) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return if (disableFutureDates) {
+                    // DatePicker returns selected dates at midnight UTC.
+                    // We need to calculate "Today" in the user's local timezone,
+                    // then convert it to midnight UTC so they match perfectly!
+                    val localToday = Calendar.getInstance()
+
+                    val todayUtc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                        set(Calendar.YEAR, localToday.get(Calendar.YEAR))
+                        set(Calendar.MONTH, localToday.get(Calendar.MONTH))
+                        set(Calendar.DAY_OF_MONTH, localToday.get(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+
+                    // Allow if the selected date is less than or equal to today
+                    utcTimeMillis <= todayUtc
+                } else {
+                    true // Allow all dates if restriction is off
+                }
+            }
+        }
+    }
+
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialDate.time
+        initialSelectedDateMillis = initialDate.time,
+        selectableDates = selectableDates
     )
 
     // 🔥 Match colors from AuthDatePickerDialog
@@ -72,7 +107,7 @@ fun MonkeysDatePicker(
                 onClick = { onDateSelected(datePickerState.selectedDateMillis) },
                 colors = ButtonDefaults.textButtonColors(contentColor = AuthPrimaryGreen)
             ) {
-                Text("Next")
+                Text(proceedText)
             }
         },
         dismissButton = {
