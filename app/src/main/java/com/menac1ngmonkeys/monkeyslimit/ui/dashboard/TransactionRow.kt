@@ -41,6 +41,8 @@ fun TransactionRow(
     transaction: TransactionItemData,
     modifier: Modifier = Modifier,
     onClick: (Int) -> Unit = {},
+    category: String = transaction.category,
+    subtitle: String = transaction.subtitle
 ) {
     Column(
         modifier = Modifier
@@ -94,7 +96,7 @@ fun TransactionRow(
 
                 // Combined Category and Subtitle (e.g., "Subscription, 06:20 PM")
                 Text(
-                    text = "${transaction.category}, ${transaction.subtitle.substringBefore(" ")}",
+                    text = "$category, $subtitle",
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = TextUnit(12f, TextUnitType.Sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -104,6 +104,7 @@ fun ReviewSmartSplitScreen(
     // Local States
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<SmartSplitItemUi?>(null) }
+    var itemToDelete by remember { mutableStateOf<SmartSplitItemUi?>(null) }
     var isImageExpanded by remember { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -138,6 +139,46 @@ fun ReviewSmartSplitScreen(
                 } else {
                     viewModel.addItem(name, price, qty)
                     showAddDialog = false
+                }
+            }
+        )
+    }
+
+    // --- DELETE CONFIRMATION DIALOG ---
+    if (itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Delete Item",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete '${itemToDelete?.name}'? This action cannot be undone.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        itemToDelete?.let { viewModel.deleteItem(it.id) }
+                        itemToDelete = null // Close the dialog
+                    },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -300,7 +341,7 @@ fun ReviewSmartSplitScreen(
                         item = item,
                         availableMembers = uiState.availableMembers,
                         onEdit = { itemToEdit = item },
-                        onDelete = { viewModel.deleteItem(item.id) },
+                        onDelete = { itemToDelete = item },
                         onRowClick = {
                             uiState.selectedMemberIdForAssignment?.let { memberId -> viewModel.toggleMemberAssignment(item.id, memberId) }
                         }

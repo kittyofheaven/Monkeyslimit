@@ -99,7 +99,8 @@ fun ManualTransactionContent(
                 currentCal.set(java.util.Calendar.DAY_OF_MONTH, cal.get(java.util.Calendar.DAY_OF_MONTH))
                 transactionDate = currentCal.time
             }
-        }
+        },
+        proceedText = "Next"
     )
 
     MonkeysTimePicker(

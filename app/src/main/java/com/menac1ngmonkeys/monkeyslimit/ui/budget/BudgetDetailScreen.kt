@@ -204,7 +204,9 @@ fun BudgetDetailScreenContent(
             items(uiState.relatedTransactions) { transaction ->
                 TransactionRow(
                     transaction = transaction,
-                    onClick = { onTransactionClick(transaction.id) }
+                    onClick = { onTransactionClick(transaction.id) },
+                    category = transaction.category.substringBefore(" "),
+                    subtitle = transaction.subtitle
                 )
             }
         }

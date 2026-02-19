@@ -102,6 +102,7 @@ fun ReviewTransactionScreenContent(
     }
 
     var itemToEdit by remember { mutableStateOf<ReviewItemUi?>(null) }
+    var itemToDelete by remember { mutableStateOf<ReviewItemUi?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var isImageExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -190,6 +191,47 @@ fun ReviewTransactionScreenContent(
         )
     }
 
+    // --- DELETE CONFIRMATION DIALOG ---
+    if (itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { itemToDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp),
+            title = {
+                Text(
+                    text = "Delete Item",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete '${itemToDelete?.name}'? This action cannot be undone.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Remove the item from the list
+                        items = items.filter { it.id != itemToDelete?.id }
+                        itemToDelete = null // Close the dialog
+                    },
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) {
+                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
+
     if (showAddDialog) {
         TransactionItemDialog(
             title = "Add Item",
@@ -218,7 +260,8 @@ fun ReviewTransactionScreenContent(
                 currentCal.set(Calendar.DAY_OF_MONTH, cal.get(Calendar.DAY_OF_MONTH))
                 transactionDate = currentCal.time
             }
-        }
+        },
+        proceedText = "Next"
     )
 
     MonkeysTimePicker(
@@ -306,7 +349,7 @@ fun ReviewTransactionScreenContent(
                         allBudgets = budgets,
                         showBudget = transactionType == TransactionType.EXPENSE,
                         onEdit = { itemToEdit = item },
-                        onDelete = { items = items.toMutableList().apply { removeAt(index) } },
+                        onDelete = { itemToDelete = item },
                         onCategorySelected = { newCat ->
                             items = items.toMutableList().apply { this[index] = item.copy(categoryId = newCat.id) }
                         },

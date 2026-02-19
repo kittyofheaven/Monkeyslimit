@@ -70,7 +70,8 @@ fun TransactionDetailScreen(
                 showDatePicker = false
                 showTimePicker = true // Proceed to Time Picker
             }
-        }
+        },
+        proceedText = "Next"
     )
 
     // 2. Time Picker

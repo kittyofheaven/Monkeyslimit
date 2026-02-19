@@ -29,5 +29,6 @@ data class DashboardUiState(
     val recentTransactions: List<TransactionItemData> = emptyList(),
     val currentFilter: DashboardFilter = DashboardFilter.ALL,
     val currentMonth: String = "",
-    val notification: DashboardNotification = DashboardNotification.None
+    val notification: DashboardNotification = DashboardNotification.None,
+    val selectedDateMillis: Long = System.currentTimeMillis()
 )

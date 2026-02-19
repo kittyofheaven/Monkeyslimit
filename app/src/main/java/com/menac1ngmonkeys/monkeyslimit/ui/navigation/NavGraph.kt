@@ -255,7 +255,7 @@ fun NavGraph(
         }
         composable(NavItem.ManualTransaction.route) {
             ManualTransactionScreen(
-                onNavigateBack = { navController.navigateSingleTopTo(NavItem.Dashboard.route) }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(
