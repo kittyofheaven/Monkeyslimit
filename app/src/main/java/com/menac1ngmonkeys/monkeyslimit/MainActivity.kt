@@ -2,6 +2,7 @@ package com.menac1ngmonkeys.monkeyslimit
 
 import AppViewModelProvider
 import android.Manifest
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -352,11 +353,7 @@ fun MonkeysLimitApp(
                         navController = navController,
                         navItems = NavItem.mainNavItems,
                         currentRoute = currentRoute,
-                        cutoutBackgroundColor = if (currentRoute == NavItem.Dashboard.route) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
+                        cutoutBackgroundColor = MaterialTheme.colorScheme.surface
                     )
                 }
             }

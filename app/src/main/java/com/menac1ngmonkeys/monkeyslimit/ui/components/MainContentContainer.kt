@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,15 +43,20 @@ fun MainContentContainer(
     containerColor: Color = MaterialTheme.colorScheme.background,
     content: @Composable () -> Unit
 ) {
+    val containerShape = RoundedCornerShape(
+        topStartPercent = 15,
+        topEndPercent = 15,
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clip(
-                RoundedCornerShape(
-                    topStartPercent = 15,
-                    topEndPercent = 15,
-                )
+            .shadow(
+                elevation = 8.dp,
+                shape = containerShape,
+                clip = false // Set to false so the shadow itself isn't clipped
             )
+            .clip(containerShape)
             .background(containerColor)
             .padding(
                 top = 20.dp,
