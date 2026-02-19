@@ -73,6 +73,7 @@ import com.menac1ngmonkeys.monkeyslimit.ui.navigation.NavItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.BudgetUiState
 import com.menac1ngmonkeys.monkeyslimit.ui.state.SortDirection
 import com.menac1ngmonkeys.monkeyslimit.ui.state.SortType
+import com.menac1ngmonkeys.monkeyslimit.ui.theme.lighten
 import com.menac1ngmonkeys.monkeyslimit.utils.toRupiahFormat
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AppViewModel
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.BudgetDetailViewModel
@@ -135,16 +136,22 @@ fun BudgetScreen(
                     Box(Modifier.fillMaxSize()) { /* Empty placeholder */ }
                 }
                 is BudgetScreenState.Detail -> {
-                    BudgetDetailWrapper(
-                        budgetId = state.budgetId,
-                        // Pass current filter context so Detail matches the Selection
-                        selectedMonth = budgetListState.selectedMonth,
-                        selectedYear = budgetListState.selectedYear,
-                        onNavigateBack = {
-                            screenState = BudgetScreenState.List
-                        },
-                        navController = navController
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 4.dp)
+                    ) {
+                        BudgetDetailWrapper(
+                            budgetId = state.budgetId,
+                            // Pass current filter context so Detail matches the Selection
+                            selectedMonth = budgetListState.selectedMonth,
+                            selectedYear = budgetListState.selectedYear,
+                            onNavigateBack = {
+                                screenState = BudgetScreenState.List
+                            },
+                            navController = navController
+                        )
+                    }
                 }
             }
         }
@@ -458,7 +465,7 @@ fun ActionButtons(
                 .fillMaxWidth()
                 .height(40.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFFD54F), // Gold Color
+                containerColor = MaterialTheme.colorScheme.primaryContainer.lighten(0.2f), // Gold Color
                 contentColor = Color.Black
             ),
             shape = RoundedCornerShape(25.dp)
