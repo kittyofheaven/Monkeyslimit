@@ -1,6 +1,7 @@
 package com.menac1ngmonkeys.monkeyslimit.data.remote.response
 
 import androidx.annotation.Keep
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 
 @Keep
@@ -18,7 +19,7 @@ data class OcrResponse(
 
 @Keep
 data class OcrData(
-    val menu: List<OcrItem> = emptyList(),
+    val menu: JsonElement? = null,
     @SerializedName("sub_total") val subTotal: OcrSubTotal? = null,
     val total: OcrTotal? = null
 )

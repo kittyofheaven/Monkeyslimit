@@ -6,5 +6,6 @@ data class AuthUiState(
     val currentUser: FirebaseUser? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isRegistrationComplete: Boolean = false
+    val isRegistrationComplete: Boolean = false,
+    val isWaitingForVerification: Boolean = false
 )

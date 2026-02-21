@@ -49,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "monkeyslimit_database"
                 )
-                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigration(false)
                 .build()
                 INSTANCE = instance
                 instance

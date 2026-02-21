@@ -33,3 +33,11 @@
 
 # 6. Kotlin Coroutines specific rules
 -keep class kotlin.coroutines.Continuation
+
+# 7. Strip debug/verbose/info log calls in release builds
+# Only Log.w and Log.e are preserved for production diagnostics
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+    public static int i(...);
+}

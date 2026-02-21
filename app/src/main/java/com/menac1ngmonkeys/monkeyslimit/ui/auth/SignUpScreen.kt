@@ -1,5 +1,6 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.auth
 
+import AppViewModelProvider
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.menac1ngmonkeys.monkeyslimit.R
+import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.AuthViewModel
 import java.util.*
 
@@ -39,17 +41,37 @@ val incomeOptions = listOf(
     "> Rp 20.000.000"
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     onNavigateToLogin: () -> Unit,
-    // UPDATED SIGNATURE
+    onNavigateToVerification: (String) -> Unit,
     onEmailSignUp: (String, String, String, String, String, String, Date?, String, String, Boolean) -> Unit,
     authViewModel: AuthViewModel = viewModel(factory = AppViewModelProvider.Factory),
 ) {
     val authUiState by authViewModel.uiState.collectAsState()
-    val isLoading = authUiState.isLoading
 
+    SignUpContent(
+        isLoading = authUiState.isLoading,
+        error = authUiState.error,
+        isWaitingForVerification = authUiState.isWaitingForVerification,
+        onClearError = { authViewModel.clearError() },
+        onNavigateToLogin = onNavigateToLogin,
+        onNavigateToVerification = onNavigateToVerification,
+        onEmailSignUp = onEmailSignUp
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SignUpContent(
+    isLoading: Boolean,
+    error: String?,
+    isWaitingForVerification: Boolean,
+    onClearError: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateToVerification: (String) -> Unit,
+    onEmailSignUp: (String, String, String, String, String, String, Date?, String, String, Boolean) -> Unit,
+) {
     // Form States
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -61,8 +83,12 @@ fun SignUpScreen(
     var gender by remember { mutableStateOf("") }
     var income by remember { mutableStateOf("") }
     var marriageStatusStr by remember { mutableStateOf("") } // "Married" or "Single"
+
+    // --- Password States ---
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
     // Validation State (For Pop-up Dialog)
     var validationError by remember { mutableStateOf<String?>(null) }
@@ -77,6 +103,7 @@ fun SignUpScreen(
     var incomeError by remember { mutableStateOf<String?>(null) }
     var marriageStatusError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
     // Dropdown States
     var jobExpanded by remember { mutableStateOf(false) }
@@ -106,11 +133,11 @@ fun SignUpScreen(
     }
 
     // COMBINED ERROR DIALOG (Handles both Firebase errors & Local Validation errors)
-    val activeError = authUiState.error ?: validationError
-    if (activeError != null) {
+    val activeError = error ?: validationError
+    if (activeError != null && !activeError.startsWith("Success")) {
         AlertDialog(
             onDismissRequest = {
-                authViewModel.clearError()
+                onClearError()
                 validationError = null
             },
             containerColor = Color.White,
@@ -137,7 +164,7 @@ fun SignUpScreen(
                         val isSuccess = activeError.startsWith("Success")
 
                         // 2. Clear the errors to dismiss the dialog
-                        authViewModel.clearError()
+                        onClearError()
                         validationError = null
 
                         // 3. If it was successful, navigate back to Login!
@@ -153,6 +180,13 @@ fun SignUpScreen(
                 }
             }
         )
+    }
+
+    // Trigger navigation when the ViewModel successfully starts the verification process
+    LaunchedEffect(isWaitingForVerification) {
+        if (isWaitingForVerification) {
+            onNavigateToVerification(email)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -290,6 +324,24 @@ fun SignUpScreen(
                         errorMessage = passwordError
                     )
 
+                    AuthInputField(
+                        label = "Confirm Password",
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it; confirmPasswordError = null },
+                        visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = Color.Gray
+                                )
+                            }
+                        },
+                        isError = confirmPasswordError != null,
+                        errorMessage = confirmPasswordError
+                    )
+
                     Spacer(Modifier.height(24.dp))
 
                     Button(
@@ -331,12 +383,33 @@ fun SignUpScreen(
                             if (income.isBlank()) { incomeError = "Required"; hasError = true }
                             if (marriageStatusStr.isBlank()) { marriageStatusError = "Required"; hasError = true }
 
-                            // 5. Check Password
+                            // 5. Check Password (Gold Standard)
                             if (password.isBlank()) {
                                 passwordError = "Required"
                                 hasError = true
-                            } else if (password.length < 6) {
-                                passwordError = "Min 6 chars"
+                            } else if (password.length < 8) {
+                                passwordError = "Min 8 characters required"
+                                hasError = true
+                            } else if (!password.any { it.isUpperCase() }) {
+                                passwordError = "Needs at least 1 uppercase letter"
+                                hasError = true
+                            } else if (!password.any { it.isLowerCase() }) {
+                                passwordError = "Needs at least 1 lowercase letter"
+                                hasError = true
+                            } else if (!password.any { it.isDigit() }) {
+                                passwordError = "Needs at least 1 number"
+                                hasError = true
+                            } else if (!password.any { !it.isLetterOrDigit() }) {
+                                passwordError = "Needs at least 1 special character"
+                                hasError = true
+                            }
+
+                            // 6. Check Confirm Password Match
+                            if (confirmPassword.isBlank()) {
+                                confirmPasswordError = "Required"
+                                hasError = true
+                            } else if (confirmPassword != password) {
+                                confirmPasswordError = "Passwords do not match"
                                 hasError = true
                             }
 
@@ -387,11 +460,18 @@ fun SignUpScreen(
     }
 }
 
-@Preview
+@Preview(showBackground = true)
 @Composable
 private fun SignUpScreenPreview() {
-    SignUpScreen(
-        onNavigateToLogin = {},
-        onEmailSignUp = { _, _, _, _, _, _, _, _, _, _ -> }
-    )
+    MonkeyslimitTheme {
+        SignUpContent(
+            isLoading = false,
+            error = null,
+            isWaitingForVerification = false,
+            onClearError = {},
+            onNavigateToLogin = {},
+            onNavigateToVerification = {},
+            onEmailSignUp = { _, _, _, _, _, _, _, _, _, _ -> }
+        )
+    }
 }

@@ -48,13 +48,16 @@ android {
         applicationId = "com.menac1ngmonkeys.monkeyslimit"
         minSdk = 29
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.1.2"
+        versionCode = 8
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", "\"https://monkeylimitsbe.rtbconnect.space/\"")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -62,6 +65,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            buildConfigField("String", "BASE_URL", "\"https://monkeylimitsbe.rtbconnect.space/\"")
         }
     }
     compileOptions {
@@ -70,6 +74,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
