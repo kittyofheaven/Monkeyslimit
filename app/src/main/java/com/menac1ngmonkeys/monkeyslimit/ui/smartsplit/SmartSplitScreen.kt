@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -47,6 +49,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -57,6 +60,7 @@ import java.io.File
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun SmartSplitScreen(
+    navController: NavController,
     onImagePicked: (Uri) -> Unit = {},
     onHistoryClick: () -> Unit = {},
     viewModel: SmartSplitViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -65,12 +69,42 @@ fun SmartSplitScreen(
     val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
     val uiState by viewModel.uiState.collectAsState()
 
-    // Wrapper to handle validation before navigation
-    val handleImageSelection: (Uri) -> Unit = { uri ->
-        viewModel.validateReceipt(context, uri) {
-            // Only navigate if valid
-            onImagePicked(uri)
+    // --- FIX: Use rememberSaveable to survive navigation ---
+    var rawImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // --- Cropper Result Listener ---
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val editedImageUriState = currentBackStackEntry?.savedStateHandle
+        ?.getLiveData<Uri>("edited_image_uri")
+        ?.observeAsState()
+
+    LaunchedEffect(editedImageUriState?.value) {
+        editedImageUriState?.value?.let { croppedUri ->
+            val rawUri = rawImageUriString?.let { Uri.parse(it) }
+
+            if (rawUri != null) {
+                // 1. Validate using the UNCROPPED image (higher chance of finding keywords)
+                viewModel.validateReceipt(context, rawUri) {
+                    // 2. Pass the CROPPED image to the API
+                    onImagePicked(croppedUri)
+                }
+            }
+            currentBackStackEntry.savedStateHandle.remove<Uri>("edited_image_uri")
         }
+    }
+
+    // --- Route Image to Cropper ---
+    val navigateToCropper = { uri: Uri ->
+        rawImageUriString = uri.toString() // Save the raw URI safely!
+        val encodedUri = Uri.encode(uri.toString())
+
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_aspect_ratio", 9f / 16f)
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_is_dynamic", true)
+
+        // ADD YOUR CUSTOM TEXT HERE!
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_bottom_text", "Crop only the purchased items")
+
+        navController.navigate(NavItem.ImagePreview.createRoute(encodedUri))
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -78,7 +112,7 @@ fun SmartSplitScreen(
     ) { uri: Uri? ->
         if (uri != null) {
             Log.d("SmartSplit", "Image picked from gallery: $uri")
-            handleImageSelection(uri)
+            navigateToCropper(uri)
         }
     }
 
@@ -112,7 +146,7 @@ fun SmartSplitScreen(
             if (permissionState.status.isGranted) {
                 CameraContent(
                     onGalleryClick = { galleryLauncher.launch("image/*") },
-                    onPhotoCaptured = { uri -> handleImageSelection(uri) },
+                    onPhotoCaptured = { uri -> navigateToCropper(uri) },
                     onHistoryClick = onHistoryClick
                 )
             } else {

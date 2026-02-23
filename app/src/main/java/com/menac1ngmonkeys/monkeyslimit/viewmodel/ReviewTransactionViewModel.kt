@@ -365,7 +365,9 @@ class ReviewTransactionViewModel(
                                     val res = ApiConfig.getApiService().classifyText(req)
                                     if (res.isSuccessful && res.body()?.ok == true) {
                                         val catName = res.body()?.data?.prediction ?: ""
-                                        matchedCategoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?: 0
+                                        // If null then fallback to Others
+                                        matchedCategoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?:
+                                                            allCategories.firstOrNull { it.name.equals("Others", ignoreCase = true) }?.id ?: 9
                                     }
                                 } catch (e: Exception) {
                                     Log.e("ReviewViewModel", "   ❌ Classification error for ${ocrItem.nm}")
@@ -436,24 +438,45 @@ class ReviewTransactionViewModel(
 
     private fun extractDateAndTime(decodedText: String) {
         var detectedDateObj: Date? = null
-        val datePattern = Pattern.compile("(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})|(\\d{4}[/-]\\d{1,2}[/-]\\d{1,2})|(\\d{1,2}[\\s\\.\\-\\/]+[a-zA-Z]{3,}[\\s\\.\\-\\/]+\\d{2,4})", Pattern.CASE_INSENSITIVE)
+
+        // 1. Catches standard formats, slashes, dashes, and the dots (20.02.26)
+        val datePattern = Pattern.compile("(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})|(\\d{4}[/\\-.]\\d{1,2}[/\\-.]\\d{1,2})|(\\d{1,2}[\\s\\.\\-\\/]+[a-zA-Z]{3,}[\\s\\.\\-\\/]+\\d{2,4})", Pattern.CASE_INSENSITIVE)
         val dateMatcher = datePattern.matcher(decodedText)
 
         if (dateMatcher.find()) {
             val cleanDate = dateMatcher.group().replace(Regex("[\\.\\-\\/,]"), " ").replace(Regex("\\s+"), " ").trim()
-            val formats = listOf("d MMM yyyy", "dd MMM yyyy", "d MMMM yyyy", "dd MMMM yyyy", "d MMM yy", "dd MMM yy", "d M yyyy", "dd MM yyyy", "yyyy MM dd")
+
+            val formats = listOf(
+                "dd MM yyyy", "yyyy MM dd", "dd MM yy", "yy MM dd", "d M yyyy",
+                "d MMM yyyy", "dd MMM yyyy", "d MMMM yyyy", "dd MMMM yyyy",
+                "d MMM yy", "dd MMM yy"
+            )
             val locales = listOf(Locale.US, Locale("id", "ID"))
+
             outerLoop@ for (locale in locales) {
                 for (fmt in formats) {
                     try {
                         val parser = SimpleDateFormat(fmt, locale).apply { isLenient = false }
-                        detectedDateObj = parser.parse(cleanDate)
-                        if (detectedDateObj != null) break@outerLoop
+                        val parsedDate = parser.parse(cleanDate)
+
+                        if (parsedDate != null) {
+                            val cal = Calendar.getInstance().apply { time = parsedDate }
+
+                            // 2. THE FIX: If it parses 20.02.26 as year 0026, correct it to 2026
+                            val parsedYear = cal.get(Calendar.YEAR)
+                            if (parsedYear < 100) {
+                                cal.set(Calendar.YEAR, parsedYear + 2000)
+                            }
+
+                            detectedDateObj = cal.time
+                            break@outerLoop
+                        }
                     } catch (e: Exception) { }
                 }
             }
         }
 
+        // 3. Time extraction safely boundary-checks (ignores the dash in 20.02.26-11:40)
         val timePattern = Pattern.compile("\\b([01]?\\d|2[0-3])[:.]([0-5]\\d)(?:[:.]([0-5]\\d))?\\b")
         val timeMatcher = timePattern.matcher(decodedText)
         var timeFound = false

@@ -41,7 +41,10 @@ import java.io.FileOutputStream
 @Composable
 fun ImagePreviewScreen(
     navController: NavController,
-    imageUri: Uri
+    imageUri: Uri,
+    aspectRatioValue: Float = 1f,
+    isDynamicCrop: Boolean = false,
+    bottomBarText: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -60,16 +63,19 @@ fun ImagePreviewScreen(
 
     val handleSizePx = with(density) { 20.dp.toPx() }
 
+    val targetCropType = if (isDynamicCrop) CropType.Dynamic else CropType.Static
+    val targetContentScale = if (isDynamicCrop) ContentScale.Fit else ContentScale.FillWidth
+
     // UPDATED: Properties to force full width and bound enforcement
     val cropProperties = CropDefaults.properties(
         cropOutlineProperty = CropOutlineProperty(
             OutlineType.Rect,
             RectCropShape(id = 0, title = "Square")
         ),
-        cropType = CropType.Static,
+        cropType = targetCropType,
         handleSize = handleSizePx,
-        contentScale = ContentScale.FillWidth, // Forces the image to the full width
-        aspectRatio = AspectRatio(1f),
+        contentScale = targetContentScale, // Forces the image to the full width
+        aspectRatio = AspectRatio(aspectRatioValue),
         fling = false, // Enabling fling helps the library calculate momentum-based bounds
         maxZoom = 10f,
         zoomable = true,
@@ -159,7 +165,7 @@ fun ImagePreviewScreen(
                 .padding(16.dp)
         ) {
             Text(
-                "Pinch to Zoom",
+                text = bottomBarText ?: "Pinch to Zoom",
                 color = Color.LightGray,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.Center)
@@ -184,7 +190,7 @@ private fun loadBitmapFromUri(context: Context, uri: Uri): ImageBitmap? {
 
 private fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
     return try {
-        val fileName = "cropped_profile_${System.currentTimeMillis()}.jpg"
+        val fileName = "cropped_image_${System.currentTimeMillis()}.jpg"
         val file = File(context.cacheDir, fileName)
         FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         Uri.fromFile(file)

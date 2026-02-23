@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +43,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -53,8 +56,8 @@ import java.io.File
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ScanTransactionScreen(
+    navController: NavController, // <-- ADDED
     onNavigateToManual: () -> Unit,
-    // UPDATED: Now accepts the OCR text string
     onImagePicked: (Uri, String?) -> Unit,
     viewModel: ScanTransactionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -62,19 +65,50 @@ fun ScanTransactionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val permissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
 
-    // --- Process Image Handler ---
-    val processImage = { uri: Uri ->
-        viewModel.analyzeReceipt(context, uri) { recognizedText ->
-            // Pass BOTH the URI and the Text to the next screen
-            onImagePicked(uri, recognizedText)
+    // --- FIX: Use rememberSaveable to survive navigation ---
+    var rawImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // --- Cropper Result Listener ---
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val editedImageUriState = currentBackStackEntry?.savedStateHandle
+        ?.getLiveData<Uri>("edited_image_uri")
+        ?.observeAsState()
+
+    LaunchedEffect(editedImageUriState?.value) {
+        editedImageUriState?.value?.let { croppedUri ->
+            val rawUri = rawImageUriString?.let { Uri.parse(it) }
+
+            if (rawUri != null) {
+                // 1. Run local ML Kit on the UNCROPPED image to extract the Date safely
+                viewModel.analyzeReceipt(context, rawUri) { recognizedText ->
+                    // 2. Pass the CROPPED image and the RAW text to the Review Screen
+                    onImagePicked(croppedUri, recognizedText)
+                }
+            }
+            currentBackStackEntry.savedStateHandle.remove<Uri>("edited_image_uri")
         }
+    }
+
+    // --- Route Image to Cropper ---
+    val navigateToCropper = { uri: Uri ->
+        rawImageUriString = uri.toString() // Save the raw URI safely!
+        val encodedUri = Uri.encode(uri.toString())
+
+        // Pass dynamic parameters to allow rectangular cropping
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_aspect_ratio", 9f / 16f)
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_is_dynamic", true)
+
+        // ADD YOUR CUSTOM TEXT HERE!
+        navController.currentBackStackEntry?.savedStateHandle?.set("crop_bottom_text", "Crop only the purchased items")
+
+        navController.navigate(NavItem.ImagePreview.createRoute(encodedUri))
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            processImage(uri)
+            navigateToCropper(uri)
         }
     }
 
@@ -110,7 +144,7 @@ fun ScanTransactionScreen(
                     isFlashOn = uiState.isFlashOn,
                     onToggleFlash = { viewModel.toggleFlash() },
                     onOpenGallery = { galleryLauncher.launch("image/*") },
-                    onPhotoCaptured = { uri -> processImage(uri) }
+                    onPhotoCaptured = { uri -> navigateToCropper(uri) }
                 )
 
                 if (uiState.isProcessing) {

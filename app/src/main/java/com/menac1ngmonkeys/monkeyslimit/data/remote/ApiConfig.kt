@@ -22,7 +22,7 @@ object ApiConfig {
             .connectTimeout(15, TimeUnit.SECONDS)
 
             // 2. Read Timeout: Time to wait for the AI to finish processing
-            // Since Donut OCR is heavy, 60s is a safe "maximum"
+            // Since Donut OCR is heavy, 180s is a safe "maximum"
             .readTimeout(180, TimeUnit.SECONDS)
 
             // 3. Write Timeout: Time to upload your image
