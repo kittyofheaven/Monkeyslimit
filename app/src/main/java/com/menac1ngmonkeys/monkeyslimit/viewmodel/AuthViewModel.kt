@@ -9,15 +9,19 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.FirebaseTooManyRequestsException
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.User
 import com.menac1ngmonkeys.monkeyslimit.data.repository.UsersRepository
 import com.menac1ngmonkeys.monkeyslimit.ui.state.AuthUiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -44,6 +48,18 @@ class AuthViewModel(
                 Log.e("AuthViewModel", "Token invalid (Password changed or Banned). Signing out.")
                 signOut()
             }
+
+            // --- THE FIX: Prevent Auto-Login for Unverified Users ---
+            // Check if they signed in using Email/Password
+            val isEmailAuth = user?.providerData?.any { it.providerId == "password" }
+
+            // If they used email but ARE NOT verified yet, do NOT expose them to the UI.
+            // This keeps `uiState.currentUser` null, so the app stays on the SignUpScreen!
+            if (isEmailAuth == true && !user.isEmailVerified) {
+                Log.d("AuthViewModel", "User created but unverified. Blocking auto-route.")
+                return@addAuthStateListener
+            }
+
             _uiState.update { it.copy(currentUser = user) }
         }
     }
@@ -209,17 +225,15 @@ class AuthViewModel(
             }
     }
 
+    // --- NEW VARIABLES FOR VERIFICATION ---
+    private var verificationPollingJob: Job? = null
+    private var pendingRegistrationUser: User? = null
+
+    // --- REPLACED SIGN UP FUNCTION ---
     fun signUpWithEmail(
-        email: String,
-        password: String,
-        firstName: String,
-        lastName: String,
-        mobile: String,
-        job: String,
-        birthDate: Date?,
-        gender: String,
-        income: String,
-        isMarried: Boolean
+        email: String, password: String, firstName: String, lastName: String,
+        mobile: String, job: String, birthDate: Date?, gender: String,
+        income: String, isMarried: Boolean
     ) {
         if (birthDate == null) { _uiState.update { it.copy(error = "Birth date required") }; return }
 
@@ -228,48 +242,27 @@ class AuthViewModel(
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val firebaseUser = auth.currentUser
-                    firebaseUser?.let { currentUser ->
-                        val user = User(
-                            uid = currentUser.uid,
-                            firstName = firstName,
-                            lastName = lastName,
-                            email = email,
-                            mobileNumber = mobile,
-                            job = job,
-                            birthDate = birthDate,
-                            gender = gender,
-                            income = income,
-                            isMarried = isMarried,
-                            isSynced = false
+                    val currentUser = auth.currentUser
+                    currentUser?.let {
+                        // Store user data temporarily in memory
+                        pendingRegistrationUser = User(
+                            uid = it.uid, firstName = firstName, lastName = lastName,
+                            email = email, mobileNumber = mobile, job = job,
+                            birthDate = birthDate, gender = gender, income = income,
+                            isMarried = isMarried, isSynced = false
                         )
 
-                        // 1. SEND THE VERIFICATION EMAIL
-                        currentUser.sendEmailVerification().addOnCompleteListener { verifyTask ->
+                        // SEND INITIAL EMAIL
+                        it.sendEmailVerification().addOnCompleteListener { verifyTask ->
                             if (verifyTask.isSuccessful) {
-                                // Launch a coroutine so we can use our new 'suspend' function
-                                viewModelScope.launch(Dispatchers.IO) {
-
-                                    // 2. Save user data to Room/Firestore and WAIT for it to finish
-                                    saveUserToBoth(user)
-
-                                    // 3. Data is safely in Firestore! NOW we can sign out without causing errors.
-                                    auth.signOut()
-
-                                    // 4. Update the UI to show a success message
-                                    _uiState.update {
-                                        it.copy(
-                                            isLoading = false,
-                                            error = "Success! Please check your email inbox and click the verification link before logging in."
-                                        )
-                                    }
+                                // Trigger the UI dialog and start auto-detecting!
+                                _uiState.update { state ->
+                                    state.copy(isLoading = false, isWaitingForVerification = true)
                                 }
+                                startVerificationPolling()
                             } else {
-                                _uiState.update {
-                                    it.copy(
-                                        isLoading = false,
-                                        error = verifyTask.exception?.message ?: "Failed to send verification email"
-                                    )
+                                _uiState.update { state ->
+                                    state.copy(isLoading = false, error = verifyTask.exception?.message)
                                 }
                             }
                         }
@@ -278,6 +271,67 @@ class AuthViewModel(
                     _uiState.update { it.copy(error = task.exception?.message ?: "Registration failed", isLoading = false) }
                 }
             }
+    }
+
+    // --- AUTO-DETECT VERIFICATION ---
+    private fun startVerificationPolling() {
+        verificationPollingJob?.cancel()
+        verificationPollingJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(3000) // Check every 3 seconds
+                val user = auth.currentUser
+                try {
+                    user?.reload()?.await() // Force refresh user data from Firebase
+                    if (auth.currentUser?.isEmailVerified == true) {
+
+                        // User clicked the link! Save their data to Firestore/Room
+                        pendingRegistrationUser?.let { saveUserToBoth(it) }
+
+                        auth.signOut() // Sign out so they can log in cleanly
+
+                        _uiState.update {
+                            it.copy(
+                                isWaitingForVerification = false,
+                                error = "Success! Email verified. You can now log in."
+                            )
+                        }
+                        break // Stop the loop
+                    }
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error polling verification", e)
+                }
+            }
+        }
+    }
+
+    // --- RESEND EMAIL LOGIC ---
+    fun resendVerificationEmail(onRateLimitHit: () -> Unit) {
+        auth.currentUser?.sendEmailVerification()?.addOnFailureListener { e ->
+            if (e is FirebaseTooManyRequestsException) {
+                onRateLimitHit()
+            }
+        }
+    }
+
+    // --- CANCEL REGISTRATION ---
+    fun cancelVerification() {
+        verificationPollingJob?.cancel()
+
+        // 1. UPDATE STATE IMMEDIATELY (Synchronously)
+        // This stops the SignUpScreen from bouncing you back!
+        _uiState.update { it.copy(isWaitingForVerification = false) }
+
+        // 2. Do the heavy lifting in the background
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                auth.currentUser?.delete()?.await() // Delete the unverified account
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Failed to delete canceled user", e)
+            } finally {
+                // Always ensure we sign out locally, even if delete fails
+                auth.signOut()
+            }
+        }
     }
 
 //    GOOGLE SIGN IN (Modified for Draft Mode)

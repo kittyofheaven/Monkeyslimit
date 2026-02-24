@@ -172,6 +172,7 @@ fun AuthDatePickerDialog(
     ) {
         DatePicker(
             state = state,
+            showModeToggle = false,
             colors = DatePickerDefaults.colors(
                 containerColor = Color.White,
                 selectedDayContainerColor = AuthPrimaryGreen,

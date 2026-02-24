@@ -125,6 +125,7 @@ fun MonkeysDatePicker(
     ) {
         DatePicker(
             state = datePickerState,
+            showModeToggle = false,
             colors = pickerColors,
             title = {
                 Text(

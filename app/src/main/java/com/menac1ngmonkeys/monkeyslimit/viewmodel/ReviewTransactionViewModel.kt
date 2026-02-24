@@ -2,6 +2,10 @@ package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -10,12 +14,14 @@ import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Budgets
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Categories
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.TransactionType
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Transactions
 import com.menac1ngmonkeys.monkeyslimit.data.remote.ApiConfig
 import com.menac1ngmonkeys.monkeyslimit.data.remote.response.ClassifyRequest
+import com.menac1ngmonkeys.monkeyslimit.data.remote.response.OcrItem
 import com.menac1ngmonkeys.monkeyslimit.data.repository.BudgetsRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.CategoriesRepository
 import com.menac1ngmonkeys.monkeyslimit.data.repository.TransactionsRepository
@@ -308,7 +314,13 @@ class ReviewTransactionViewModel(
             val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "jpg"
             val mediaType = mimeType.toMediaTypeOrNull()
 
+            // Get the pure file
             val file = getFileFromUri(context, uri, ".$extension") ?: return false
+
+            // --- ADD THIS LOG ---
+            val fileSizeKB = file.length() / 1024
+            Log.d("ReviewViewModel", "🚀 UPLOADING FILE SIZE: $fileSizeKB KB")
+
             val requestFile = file.asRequestBody(mediaType)
             val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
@@ -316,8 +328,29 @@ class ReviewTransactionViewModel(
             val response = ApiConfig.getApiService().predictReceipt(body)
 
             if (response.isSuccessful && response.body()?.ok == true) {
-                val menu = response.body()?.data?.menu ?: emptyList()
-                Log.d("ReviewViewModel", "API RESPONSE: Received ${menu.size} items from Donut.")
+                // --- NEW: AI-PROOF JSON PARSING ---
+                val menuElement = response.body()?.data?.menu
+                val menu = mutableListOf<OcrItem>()
+
+                if (menuElement != null) {
+                    try {
+                        val gson = Gson()
+                        if (menuElement.isJsonArray) {
+                            // The AI behaved nicely and returned a List
+                            val array = gson.fromJson(menuElement, Array<OcrItem>::class.java)
+                            menu.addAll(array)
+                        } else if (menuElement.isJsonObject) {
+                            // The AI hallucinated and returned a single Object
+                            val singleItem = gson.fromJson(menuElement, OcrItem::class.java)
+                            menu.add(singleItem)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ReviewViewModel", "Failed to parse AI menu JSON", e)
+                    }
+                }
+
+                Log.d("ReviewViewModel", "API RESPONSE: Parsed ${menu.size} items from Donut safely.")
+                // ----------------------------------
 
                 if (menu.isNotEmpty()) {
                     val allCategories = categoriesRepository.getAllCategories().first()
@@ -332,14 +365,25 @@ class ReviewTransactionViewModel(
                                     val res = ApiConfig.getApiService().classifyText(req)
                                     if (res.isSuccessful && res.body()?.ok == true) {
                                         val catName = res.body()?.data?.prediction ?: ""
-                                        matchedCategoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?: 0
-                                        Log.d("ReviewViewModel", "   ↳ Match: $catName (ID: $matchedCategoryId)")
+                                        // If null then fallback to Others
+                                        matchedCategoryId = allCategories.firstOrNull { it.name.equals(catName, ignoreCase = true) }?.id ?:
+                                                            allCategories.firstOrNull { it.name.equals("Others", ignoreCase = true) }?.id ?: 9
                                     }
                                 } catch (e: Exception) {
                                     Log.e("ReviewViewModel", "   ❌ Classification error for ${ocrItem.nm}")
                                 }
 
-                                ReviewItemUi(index + 1, ocrItem.nm, matchedCategoryId, 0, ocrItem.qty, ocrItem.price_int / ocrItem.qty)
+                                // Safe quantity check
+                                val safeQty = if (ocrItem.qty > 0) ocrItem.qty else 1
+
+                                ReviewItemUi(
+                                    id = index + 1,
+                                    name = ocrItem.nm ?: "Unknown Item",
+                                    categoryId = matchedCategoryId,
+                                    budgetId = 0,
+                                    quantity = safeQty,
+                                    pricePerUnit = ocrItem.price_int / safeQty
+                                )
                             }
                         }.awaitAll()
                     }
@@ -348,7 +392,7 @@ class ReviewTransactionViewModel(
                     Log.d("ReviewViewModel", "Donut Processing Finished Successfully.")
                     true
                 } else {
-                    Log.w("ReviewViewModel", "API RESPONSE: OK but 'menu' was empty.")
+                    Log.w("ReviewViewModel", "API RESPONSE: OK but 'menu' was empty or unparseable.")
                     false
                 }
             } else {
@@ -394,24 +438,45 @@ class ReviewTransactionViewModel(
 
     private fun extractDateAndTime(decodedText: String) {
         var detectedDateObj: Date? = null
-        val datePattern = Pattern.compile("(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})|(\\d{4}[/-]\\d{1,2}[/-]\\d{1,2})|(\\d{1,2}[\\s\\.\\-\\/]+[a-zA-Z]{3,}[\\s\\.\\-\\/]+\\d{2,4})", Pattern.CASE_INSENSITIVE)
+
+        // 1. Catches standard formats, slashes, dashes, and the dots (20.02.26)
+        val datePattern = Pattern.compile("(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})|(\\d{4}[/\\-.]\\d{1,2}[/\\-.]\\d{1,2})|(\\d{1,2}[\\s\\.\\-\\/]+[a-zA-Z]{3,}[\\s\\.\\-\\/]+\\d{2,4})", Pattern.CASE_INSENSITIVE)
         val dateMatcher = datePattern.matcher(decodedText)
 
         if (dateMatcher.find()) {
             val cleanDate = dateMatcher.group().replace(Regex("[\\.\\-\\/,]"), " ").replace(Regex("\\s+"), " ").trim()
-            val formats = listOf("d MMM yyyy", "dd MMM yyyy", "d MMMM yyyy", "dd MMMM yyyy", "d MMM yy", "dd MMM yy", "d M yyyy", "dd MM yyyy", "yyyy MM dd")
+
+            val formats = listOf(
+                "dd MM yyyy", "yyyy MM dd", "dd MM yy", "yy MM dd", "d M yyyy",
+                "d MMM yyyy", "dd MMM yyyy", "d MMMM yyyy", "dd MMMM yyyy",
+                "d MMM yy", "dd MMM yy"
+            )
             val locales = listOf(Locale.US, Locale("id", "ID"))
+
             outerLoop@ for (locale in locales) {
                 for (fmt in formats) {
                     try {
                         val parser = SimpleDateFormat(fmt, locale).apply { isLenient = false }
-                        detectedDateObj = parser.parse(cleanDate)
-                        if (detectedDateObj != null) break@outerLoop
+                        val parsedDate = parser.parse(cleanDate)
+
+                        if (parsedDate != null) {
+                            val cal = Calendar.getInstance().apply { time = parsedDate }
+
+                            // 2. THE FIX: If it parses 20.02.26 as year 0026, correct it to 2026
+                            val parsedYear = cal.get(Calendar.YEAR)
+                            if (parsedYear < 100) {
+                                cal.set(Calendar.YEAR, parsedYear + 2000)
+                            }
+
+                            detectedDateObj = cal.time
+                            break@outerLoop
+                        }
                     } catch (e: Exception) { }
                 }
             }
         }
 
+        // 3. Time extraction safely boundary-checks (ignores the dash in 20.02.26-11:40)
         val timePattern = Pattern.compile("\\b([01]?\\d|2[0-3])[:.]([0-5]\\d)(?:[:.]([0-5]\\d))?\\b")
         val timeMatcher = timePattern.matcher(decodedText)
         var timeFound = false
@@ -439,13 +504,66 @@ class ReviewTransactionViewModel(
 
     private fun getFileFromUri(context: Context, uri: Uri, extension: String): File? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val tempFile = File.createTempFile("upload_", extension, context.cacheDir)
-            tempFile.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+            // 1. GUARANTEE FIX: Copy the raw URI stream to a physical file FIRST.
+            // This forces Android to fully write the EXIF headers to disk where we can read them.
+            val tempRawFile = File.createTempFile("raw_upload_", ".jpg", context.cacheDir)
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempRawFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
-            tempFile
-        } catch (e: Exception) { null }
+
+            // 2. Read EXIF from the PHYSICAL file path (100% Reliable)
+            val exif = ExifInterface(tempRawFile.absolutePath)
+            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            val rotation = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+
+            // 3. Load the Bitmap from the physical file
+            val originalBitmap = BitmapFactory.decodeFile(tempRawFile.absolutePath) ?: return null
+
+            // 4. Physically rotate the image upright
+            var finalBitmap = originalBitmap
+            if (rotation != 0f) {
+                val matrix = Matrix().apply { postRotate(rotation) }
+                finalBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+            }
+
+            // 5. Shrink the dimensions to mimic WhatsApp (Orientation Aware)
+            // We use isLandscape to ensure we don't accidentally squash a wide image into a tall box
+            val isLandscape = finalBitmap.width > finalBitmap.height
+            val maxWidth = if (isLandscape) 1280f else 960f
+            val maxHeight = if (isLandscape) 960f else 1280f
+
+            var width = finalBitmap.width.toFloat()
+            var height = finalBitmap.height.toFloat()
+
+            if (width > maxWidth || height > maxHeight) {
+                val ratio = minOf(maxWidth / width, maxHeight / height)
+                width *= ratio
+                height *= ratio
+            }
+
+            finalBitmap = Bitmap.createScaledBitmap(finalBitmap, width.toInt(), height.toInt(), true)
+
+            // 6. Compress to ~100KB (90% JPEG) and overwrite the temp file
+            tempRawFile.outputStream().use { out ->
+                finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+
+            // Optional: Log the final size to confirm
+            val finalSizeKB = tempRawFile.length() / 1024
+            Log.d("ReviewViewModel", "🚀 FINAL COMPRESSED UPLOAD SIZE: $finalSizeKB KB")
+
+            tempRawFile
+        } catch (e: Exception) {
+            Log.e("ReviewViewModel", "Image Prep Error", e)
+            null
+        }
     }
 
     private fun parseSmartNumber(numberStr: String): Double {

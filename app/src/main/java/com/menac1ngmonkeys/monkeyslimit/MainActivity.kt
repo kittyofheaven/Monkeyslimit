@@ -52,6 +52,7 @@ import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.BudgetsSeeder
 import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.SeedCoordinator
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.AuthPrimaryGreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.CompleteProfileScreen
+import com.menac1ngmonkeys.monkeyslimit.ui.auth.EmailVerificationScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.LoginScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.auth.SignUpScreen
 import com.menac1ngmonkeys.monkeyslimit.ui.navigation.AppFAB
@@ -124,7 +125,7 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(this@MainActivity)
-            SeedCoordinator.seedDev(db)
+            SeedCoordinator.seedCore(db)
         }
 
         // Start Debug DB
@@ -178,6 +179,9 @@ fun AuthGatekeeper(
     var isLoginScreen by remember { mutableStateOf(true) }
     var showBranding by remember { mutableStateOf(true) }
 
+    // --- State to track if we should show the verification screen ---
+    var verificationEmail by remember { mutableStateOf<String?>(null) }
+
     // 1. Splash Logic
     LaunchedEffect(splashUiState.isLoading) {
         if (!splashUiState.isLoading) {
@@ -191,7 +195,7 @@ fun AuthGatekeeper(
         if (authUiState.currentUser != null) {
             authViewModel.startRealtimeSync()
 
-            // --- NEW: Seed user-specific budgets upon successful login ---
+            // --- Seed user-specific budgets upon successful login ---
             val db = AppDatabase.getDatabase(context)
             val uid = authUiState.currentUser!!.uid
             BudgetsSeeder.seedForUser(db.budgetsDao(), uid)
@@ -205,21 +209,37 @@ fun AuthGatekeeper(
     }
 
     if (authUiState.currentUser == null) {
-        // Not Logged In
-        if (isLoginScreen) {
+        if (verificationEmail != null) {
+            // 1. Show Verification Screen
+            EmailVerificationScreen(
+                email = verificationEmail!!,
+                onVerificationSuccess = {
+                    verificationEmail = null
+                    isLoginScreen = true // Send them to Login after success
+                },
+                onCancelRegistration = {
+                    verificationEmail = null
+                    isLoginScreen = false // Send them back to Sign Up
+                }
+            )
+        } else if (isLoginScreen) {
+            // 2. Show Login Screen
             LoginScreen(
                 onGoogleSignIn = onGoogleSignIn,
                 onEmailSignIn = { e, p -> authViewModel.signInWithEmail(e, p) },
                 onNavigateToSignUp = { isLoginScreen = false }
             )
         } else {
-            // FIX: Added income and isMarried to the callback parameters
+            // 3. Show Sign Up Screen
             SignUpScreen(
                 onNavigateToLogin = { isLoginScreen = true },
                 onEmailSignUp = { email, pass, fName, lName, phone, job, bDay, gender, income, isMarried ->
                     authViewModel.signUpWithEmail(
                         email, pass, fName, lName, phone, job, bDay, gender, income, isMarried
                     )
+                },
+                onNavigateToVerification = { email ->
+                    verificationEmail = email
                 }
             )
         }

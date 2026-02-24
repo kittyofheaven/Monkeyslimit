@@ -117,13 +117,13 @@ fun NavGraph(
         }
         composable(NavItem.SmartSplit.route) {
             SmartSplitScreen(
+                navController = navController, // <-- ADDED
                 onImagePicked = { uri ->
                     val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
-                    // Reference the NavItem and replace the placeholder
                     val route = NavItem.ReviewSmartSplit.route.replace("{imageUri}", encodedUri)
                     navController.navigate(route)
                 },
-                onHistoryClick = { // Handle the new callback
+                onHistoryClick = {
                     navController.navigate(NavItem.SmartSplitHistory.route)
                 }
             )
@@ -202,12 +202,19 @@ fun NavGraph(
             arguments = listOf(navArgument("encodedUri") { type = NavType.StringType })
         ) { backStackEntry ->
             val encodedUri = backStackEntry.arguments?.getString("encodedUri") ?: return@composable
-            // Decode the URI string back to a Uri object
             val imageUri = Uri.decode(encodedUri)
+
+            // Read parameters passed from the previous screen (default to profile picture mode)
+            val aspectRatio = navController.previousBackStackEntry?.savedStateHandle?.get<Float>("crop_aspect_ratio") ?: 1f
+            val isDynamic = navController.previousBackStackEntry?.savedStateHandle?.get<Boolean>("crop_is_dynamic") ?: false
+            val bottomText = navController.previousBackStackEntry?.savedStateHandle?.get<String>("crop_bottom_text")
 
             ImagePreviewScreen(
                 navController = navController,
-                imageUri = Uri.parse(imageUri)
+                imageUri = Uri.parse(imageUri),
+                aspectRatioValue = aspectRatio,
+                isDynamicCrop = isDynamic,
+                bottomBarText = bottomText
             )
         }
         composable(NavItem.CompleteProfile.route) {
@@ -234,21 +241,14 @@ fun NavGraph(
         }
         composable(NavItem.ScanTransaction.route) {
             ScanTransactionScreen(
+                navController = navController, // <-- ADDED
                 onNavigateToManual = {
                     navController.navigate(NavItem.ManualTransaction.route)
                 },
-                // Updated to accept (Uri, String?)
                 onImagePicked = { uri, ocrText ->
-                    // 1. Encode the URI
                     val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
-
-                    // 2. Encode the OCR Text (handle nulls safely)
                     val encodedOcrText = URLEncoder.encode(ocrText ?: "", StandardCharsets.UTF_8.toString())
-
-                    // 3. Construct the route with the query parameter
-                    // We manually construct the string to match the Review route format
                     val route = "review_transaction/$encodedUri?ocrText=$encodedOcrText"
-
                     navController.navigate(route)
                 }
             )

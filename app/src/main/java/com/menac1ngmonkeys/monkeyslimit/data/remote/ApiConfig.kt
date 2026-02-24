@@ -1,5 +1,6 @@
 package com.menac1ngmonkeys.monkeyslimit.data.remote
 
+import com.menac1ngmonkeys.monkeyslimit.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -7,10 +8,13 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiConfig {
-    private const val BASE_URL = "https://monkeylimitsbe.rtbconnect.space/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     fun getApiService(): ApiService {
-        val loggingInterceptor = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
+        val loggingInterceptor = HttpLoggingInterceptor().setLevel(
+            if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.NONE
+        )
 
         val client = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
@@ -18,7 +22,7 @@ object ApiConfig {
             .connectTimeout(15, TimeUnit.SECONDS)
 
             // 2. Read Timeout: Time to wait for the AI to finish processing
-            // Since Donut OCR is heavy, 60s is a safe "maximum"
+            // Since Donut OCR is heavy, 180s is a safe "maximum"
             .readTimeout(180, TimeUnit.SECONDS)
 
             // 3. Write Timeout: Time to upload your image

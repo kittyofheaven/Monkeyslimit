@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -41,7 +42,10 @@ import java.io.FileOutputStream
 @Composable
 fun ImagePreviewScreen(
     navController: NavController,
-    imageUri: Uri
+    imageUri: Uri,
+    aspectRatioValue: Float = 1f,
+    isDynamicCrop: Boolean = false,
+    bottomBarText: String? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -49,8 +53,8 @@ fun ImagePreviewScreen(
 
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isCropping by remember { mutableStateOf(false) }
-    var rotationAngle by remember { mutableFloatStateOf(0f) }
 
+    // Load bitmap with EXIF orientation correction
     LaunchedEffect(imageUri) {
         withContext(Dispatchers.IO) {
             val loaded = loadBitmapFromUri(context, imageUri)
@@ -60,16 +64,19 @@ fun ImagePreviewScreen(
 
     val handleSizePx = with(density) { 20.dp.toPx() }
 
+    val targetCropType = if (isDynamicCrop) CropType.Dynamic else CropType.Static
+    val targetContentScale = if (isDynamicCrop) ContentScale.Fit else ContentScale.FillWidth
+
     // UPDATED: Properties to force full width and bound enforcement
     val cropProperties = CropDefaults.properties(
         cropOutlineProperty = CropOutlineProperty(
             OutlineType.Rect,
             RectCropShape(id = 0, title = "Square")
         ),
-        cropType = CropType.Static,
+        cropType = targetCropType,
         handleSize = handleSizePx,
-        contentScale = ContentScale.FillWidth, // Forces the image to the full width
-        aspectRatio = AspectRatio(1f),
+        contentScale = targetContentScale, // Forces the image to the full width
+        aspectRatio = AspectRatio(aspectRatioValue),
         fling = false, // Enabling fling helps the library calculate momentum-based bounds
         maxZoom = 10f,
         zoomable = true,
@@ -90,9 +97,7 @@ fun ImagePreviewScreen(
     ) {
         if (imageBitmap != null) {
             ImageCropper(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { rotationZ = rotationAngle },
+                modifier = Modifier.fillMaxSize(),
                 imageBitmap = imageBitmap!!,
                 contentDescription = "Image Cropper",
                 cropProperties = cropProperties,
@@ -102,13 +107,7 @@ fun ImagePreviewScreen(
                 onCropSuccess = { croppedBitmap: ImageBitmap ->
                     scope.launch {
                         val androidBitmap = croppedBitmap.asAndroidBitmap()
-                        val finalBitmap = if (rotationAngle != 0f) {
-                            rotateBitmap(androidBitmap, rotationAngle)
-                        } else {
-                            androidBitmap
-                        }
-
-                        val savedUri = saveBitmapToCache(context, finalBitmap)
+                        val savedUri = saveBitmapToCache(context, androidBitmap)
                         if (savedUri != null) {
                             navController.previousBackStackEntry
                                 ?.savedStateHandle?.set("edited_image_uri", savedUri)
@@ -159,13 +158,19 @@ fun ImagePreviewScreen(
                 .padding(16.dp)
         ) {
             Text(
-                "Pinch to Zoom",
+                text = bottomBarText ?: "Pinch to Zoom",
                 color = Color.LightGray,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.Center)
             )
             IconButton(
-                onClick = { rotationAngle = (rotationAngle + 90f) % 360f },
+                onClick = {
+                    // Rotate the actual bitmap data so the cropper recalculates bounds
+                    imageBitmap?.let { currentBitmap ->
+                        val rotated = rotateBitmap(currentBitmap.asAndroidBitmap(), 90f)
+                        imageBitmap = rotated.asImageBitmap()
+                    }
+                },
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
                 Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = "Rotate", tint = Color.White)
@@ -174,17 +179,42 @@ fun ImagePreviewScreen(
     }
 }
 
-// --- Logic remains the same ---
+// --- Load bitmap with EXIF orientation correction ---
 private fun loadBitmapFromUri(context: Context, uri: Uri): ImageBitmap? {
     return try {
+        // 1. Decode the raw bitmap
         val inputStream = context.contentResolver.openInputStream(uri)
-        BitmapFactory.decodeStream(inputStream)?.asImageBitmap()
+        val bitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+        inputStream?.close()
+
+        // 2. Read EXIF orientation tag
+        val exifStream = context.contentResolver.openInputStream(uri) ?: return bitmap.asImageBitmap()
+        val exif = ExifInterface(exifStream)
+        val orientation = exif.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
+        exifStream.close()
+
+        // 3. Apply the correct rotation based on EXIF data
+        val rotationDegrees = when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+
+        if (rotationDegrees != 0f) {
+            rotateBitmap(bitmap, rotationDegrees).asImageBitmap()
+        } else {
+            bitmap.asImageBitmap()
+        }
     } catch (e: Exception) { null }
 }
 
 private fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
     return try {
-        val fileName = "cropped_profile_${System.currentTimeMillis()}.jpg"
+        val fileName = "cropped_image_${System.currentTimeMillis()}.jpg"
         val file = File(context.cacheDir, fileName)
         FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         Uri.fromFile(file)

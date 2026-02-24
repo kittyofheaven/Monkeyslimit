@@ -1,8 +1,11 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.profile
 
 import AppViewModelProvider
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -26,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -89,6 +93,17 @@ fun EditProfileScreen(
                 val encodedUri = Uri.encode(it.toString())
                 navController.navigate(NavItem.ImagePreview.createRoute(encodedUri))
             }
+        }
+    }
+
+    // --- ADD THIS PERMISSION LAUNCHER ---
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            showPhotoOptions = true
+        } else {
+            Toast.makeText(context, "Camera permission is required to take a photo.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -270,7 +285,18 @@ fun EditProfileScreen(
                         .offset((-12).dp, (-12).dp)
                         .clip(CircleShape)
                         .background(Color(0xFF8F9B20))
-                        .clickable { showPhotoOptions = true },
+                        .clickable {
+                            val hasPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasPermission) {
+                                showPhotoOptions = true
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -452,7 +478,11 @@ private fun EditField(
             isError = isError,
             modifier = Modifier.fillMaxWidth().height(FieldHeight),
             readOnly = readOnly,
-            trailingIcon = { Icon(Icons.Default.Edit, null, tint = Color(0xFF7A9B00)) },
+            trailingIcon = {
+                if (!readOnly) {
+                    Icon(Icons.Default.Edit, null, tint = Color(0xFF7A9B00))
+                }
+           },
             shape = FieldShape,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Transparent,

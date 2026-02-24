@@ -1,14 +1,19 @@
 package com.menac1ngmonkeys.monkeyslimit.viewmodel
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
-import android.webkit.MimeTypeMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.menac1ngmonkeys.monkeyslimit.data.local.entity.Members
 import com.menac1ngmonkeys.monkeyslimit.data.remote.ApiConfig
+import com.menac1ngmonkeys.monkeyslimit.data.remote.response.OcrItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftItem
 import com.menac1ngmonkeys.monkeyslimit.ui.state.DraftMember
 import com.menac1ngmonkeys.monkeyslimit.ui.state.ReviewSmartSplitUiState
@@ -23,7 +28,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
-import java.io.FileOutputStream
 
 class ReviewSmartSplitViewModel : ViewModel() {
 
@@ -43,33 +47,60 @@ class ReviewSmartSplitViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // --- STEP 1: PREPARE FILE FOR API ---
-                val contentResolver = context.contentResolver
-                val type = contentResolver.getType(imageUri) ?: "image/jpeg"
-                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "jpg"
-                val mediaType = type.toMediaTypeOrNull()
+                // --- STEP 1: PREPARE FILE FOR API (EXIF + Compression) ---
+                val file = prepareImageFile(context, imageUri)
 
-                val file = uriToFile(context, imageUri, ".$extension")
+                if (file == null) {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to process image") }
+                    return@launch
+                }
+
+                val mediaType = "image/jpeg".toMediaTypeOrNull()
                 val requestFile = file.asRequestBody(mediaType)
                 val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
                 // --- STEP 2: CALL BACKEND API ---
+                Log.d("SmartSplitViewModel", "Calling /predict for Smart Split...")
                 val response = ApiConfig.getApiService().predictReceipt(body)
 
                 if (response.isSuccessful && response.body()?.ok == true) {
                     val data = response.body()?.data
-                    Log.d("API_TEST", "Predict Success! Data: $data")
 
-                    val newItems = data?.menu?.mapIndexed { index, item ->
-                        val unitPrice = if (item.qty > 0) item.price_int / item.qty else item.price_int
+                    // --- STEP 3: AI-PROOF JSON PARSING ---
+                    val menuElement = data?.menu
+                    val menuList = mutableListOf<OcrItem>()
+
+                    if (menuElement != null) {
+                        try {
+                            val gson = Gson()
+                            if (menuElement.isJsonArray) {
+                                // The AI behaved nicely and returned a List
+                                val array = gson.fromJson(menuElement, Array<OcrItem>::class.java)
+                                menuList.addAll(array)
+                            } else if (menuElement.isJsonObject) {
+                                // The AI hallucinated and returned a single Object
+                                val singleItem = gson.fromJson(menuElement, OcrItem::class.java)
+                                menuList.add(singleItem)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("SmartSplitViewModel", "Failed to parse AI menu JSON", e)
+                        }
+                    }
+
+                    Log.d("SmartSplitViewModel", "API RESPONSE: Parsed ${menuList.size} items safely.")
+
+                    val newItems = menuList.mapIndexed { index, item ->
+                        val safeQty = if (item.qty > 0) item.qty else 1
+                        val unitPrice = item.price_int / safeQty
+
                         SmartSplitItemUi(
                             id = index + 1,
-                            name = item.nm,
+                            name = item.nm ?: "Unknown Item",
                             price = unitPrice,
-                            quantity = item.qty,
+                            quantity = safeQty,
                             assignedMemberIds = emptyList()
                         )
-                    } ?: emptyList()
+                    }
 
                     val tax = parsePrice(data?.subTotal?.taxPrice)
                     val service = parsePrice(data?.subTotal?.servicePrice)
@@ -85,11 +116,11 @@ class ReviewSmartSplitViewModel : ViewModel() {
                         )
                     }
                 } else {
-                    Log.e("API_TEST", "Predict Failed: ${response.errorBody()?.string()}")
+                    Log.e("SmartSplitViewModel", "Predict Failed: ${response.errorBody()?.string()}")
                     _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to analyze receipt") }
                 }
             } catch (e: Exception) {
-                Log.e("API_TEST", "Predict Error", e)
+                Log.e("SmartSplitViewModel", "Predict Error", e)
                 val errorMsg = if (e is JsonSyntaxException || e.message?.contains("BEGIN_OBJECT") == true) {
                     "Not a valid bill"
                 } else {
@@ -97,6 +128,71 @@ class ReviewSmartSplitViewModel : ViewModel() {
                 }
                 _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
             }
+        }
+    }
+
+    // --- IMAGE PREPARATION LOGIC ---
+
+    private fun prepareImageFile(context: Context, uri: Uri): File? {
+        return try {
+            // 1. GUARANTEE FIX: Copy the raw URI stream to a physical file FIRST.
+            // This forces Android to fully write the EXIF headers to disk where we can read them.
+            val tempRawFile = File.createTempFile("raw_upload_", ".jpg", context.cacheDir)
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                tempRawFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // 2. Read EXIF from the PHYSICAL file path (100% Reliable)
+            val exif = ExifInterface(tempRawFile.absolutePath)
+            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            val rotation = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+
+            // 3. Load the Bitmap from the physical file
+            val originalBitmap = BitmapFactory.decodeFile(tempRawFile.absolutePath) ?: return null
+
+            // 4. Physically rotate the image upright
+            var finalBitmap = originalBitmap
+            if (rotation != 0f) {
+                val matrix = Matrix().apply { postRotate(rotation) }
+                finalBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+            }
+
+            // 5. Shrink the dimensions to mimic WhatsApp (Orientation Aware)
+            // We use isLandscape to ensure we don't accidentally squash a wide image into a tall box
+            val isLandscape = finalBitmap.width > finalBitmap.height
+            val maxWidth = if (isLandscape) 1280f else 960f
+            val maxHeight = if (isLandscape) 960f else 1280f
+
+            var width = finalBitmap.width.toFloat()
+            var height = finalBitmap.height.toFloat()
+
+            if (width > maxWidth || height > maxHeight) {
+                val ratio = minOf(maxWidth / width, maxHeight / height)
+                width *= ratio
+                height *= ratio
+            }
+
+            finalBitmap = Bitmap.createScaledBitmap(finalBitmap, width.toInt(), height.toInt(), true)
+
+            // 6. Compress to ~100KB (90% JPEG) and overwrite the temp file
+            tempRawFile.outputStream().use { out ->
+                finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+
+            val finalSizeKB = tempRawFile.length() / 1024
+            Log.d("SmartSplitViewModel", "🚀 FINAL COMPRESSED UPLOAD SIZE: $finalSizeKB KB")
+
+            tempRawFile
+        } catch (e: Exception) {
+            Log.e("SmartSplitViewModel", "Image Prep Error", e)
+            null
         }
     }
 
@@ -113,14 +209,12 @@ class ReviewSmartSplitViewModel : ViewModel() {
         val lowerText = text.lowercase()
         var score = 0
 
-        // 1. NEGATIVE FILTERS
         val blockList = listOf(
             "add a new budget", "ai recommendation", "analytics", "split bill",
             "budgeted", "left", "spent", "sort", "kb/s", "4g", "wifi"
         )
         if (blockList.any { lowerText.contains(it) }) return false
 
-        // 2. STRONG INDICATORS
         val strongKeywords = listOf(
             "berhasil", "success", "successful", "selesai", "paid", "lunas",
             "id transaksi", "transaction id", "no. ref", "reference", "struk", "receipt",
@@ -128,18 +222,15 @@ class ReviewSmartSplitViewModel : ViewModel() {
         )
         strongKeywords.forEach { if (lowerText.contains(it)) score += 2 }
 
-        // 3. WEAK INDICATORS
         val weakKeywords = listOf(
             "total", "subtotal", "jumlah", "amount", "bayar", "cash", "tunai",
             "kembali", "change", "tax", "pajak", "admin", "fee", "biaya"
         )
         weakKeywords.forEach { if (lowerText.contains(it)) score += 1 }
 
-        // 4. CURRENCY FORMAT
         val currencyRegex = Regex("(rp|idr)\\s*[\\d\\.,]+", RegexOption.IGNORE_CASE)
         if (currencyRegex.containsMatchIn(text)) score += 2
 
-        // 5. DATE FORMAT
         val dateRegex = Regex("\\d{1,4}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{1,2}\\s+[a-z]{3,}", RegexOption.IGNORE_CASE)
         if (dateRegex.containsMatchIn(text)) score += 1
 
@@ -148,18 +239,6 @@ class ReviewSmartSplitViewModel : ViewModel() {
     }
 
     // --- HELPERS ---
-
-    private fun uriToFile(context: Context, uri: Uri, extension: String): File {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val tempFile = File.createTempFile("upload", extension, context.cacheDir)
-        val outputStream = FileOutputStream(tempFile)
-        inputStream?.use { input ->
-            outputStream.use { output ->
-                input.copyTo(output)
-            }
-        }
-        return tempFile
-    }
 
     private fun parsePrice(priceStr: String?): Double {
         if (priceStr.isNullOrBlank()) return 0.0

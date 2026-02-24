@@ -1,18 +1,13 @@
 package com.menac1ngmonkeys.monkeyslimit.ui.settings
 
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,11 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.menac1ngmonkeys.monkeyslimit.R
-import com.menac1ngmonkeys.monkeyslimit.data.local.seeders.DatabaseResetter
+import com.menac1ngmonkeys.monkeyslimit.data.worker.NotificationHelper
 import com.menac1ngmonkeys.monkeyslimit.ui.components.MainContentContainer
 import com.menac1ngmonkeys.monkeyslimit.ui.theme.MonkeyslimitTheme
 import com.menac1ngmonkeys.monkeyslimit.viewmodel.ProfileViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -45,43 +39,9 @@ fun SettingsScreen(
     profileViewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val profileUiState by profileViewModel.uiState.collectAsState()
 
-    var showConfirm by remember { mutableStateOf(false) }
-    var isResetting by remember { mutableStateOf(false) }
     var pushNotificationEnabled by remember { mutableStateOf(true) }
-
-    // Existing Reset Logic
-    if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { if (!isResetting) showConfirm = false },
-            title = { Text("Reset Database") },
-            text = { Text("Semua data akan dihapus dan categories diisi ulang. Lanjut?") },
-            confirmButton = {
-                TextButton(
-                    enabled = !isResetting,
-                    onClick = {
-                        isResetting = true
-                        scope.launch {
-                            try {
-                                DatabaseResetter.resetAndReseed(context)
-                                Toast.makeText(context, "Database direset", Toast.LENGTH_SHORT).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "Gagal reset: ${e.message}", Toast.LENGTH_LONG).show()
-                            } finally {
-                                isResetting = false
-                                showConfirm = false
-                            }
-                        }
-                    }
-                ) { Text("Ya, reset") }
-            },
-            dismissButton = {
-                TextButton(enabled = !isResetting, onClick = { showConfirm = false }) { Text("Batal") }
-            }
-        )
-    }
 
     MainContentContainer(modifier = modifier) {
         Column(
@@ -126,16 +86,6 @@ fun SettingsScreen(
                     title = "User Profile",
                     onClick = onNavigateToProfile
                 )
-                SettingsItem(
-                    icon = Icons.Default.Lock,
-                    title = "Change Password",
-                    onClick = { /* TODO */ }
-                )
-                SettingsItem(
-                    icon = Icons.AutoMirrored.Filled.HelpOutline,
-                    title = "FAQs",
-                    onClick = { /* TODO */ }
-                )
 
                 // Push Notification Toggle
                 Row(
@@ -158,7 +108,14 @@ fun SettingsScreen(
                     )
                     Switch(
                         checked = pushNotificationEnabled,
-                        onCheckedChange = { pushNotificationEnabled = it },
+                        onCheckedChange = {
+                            pushNotificationEnabled = it
+                            if (it) {
+                                NotificationHelper.scheduleDailyReminders(context)
+                            } else {
+                                NotificationHelper.cancelAllReminders(context)
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedTrackColor = Color(0xFF4CAF50) // Green track like image
                         )
@@ -196,25 +153,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 4. Reset Database Button (Bottom)
-            OutlinedButton(
-                onClick = { showConfirm = true },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isResetting,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
-                )
-            ) {
-                if (isResetting) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.error)
-                } else {
-                    Icon(Icons.Default.DeleteForever, contentDescription = null)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text("Reset Database")
-            }
+
         }
     }
 }
