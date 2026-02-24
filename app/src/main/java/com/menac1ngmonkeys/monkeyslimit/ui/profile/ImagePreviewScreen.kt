@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -52,8 +53,8 @@ fun ImagePreviewScreen(
 
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var isCropping by remember { mutableStateOf(false) }
-    var rotationAngle by remember { mutableFloatStateOf(0f) }
 
+    // Load bitmap with EXIF orientation correction
     LaunchedEffect(imageUri) {
         withContext(Dispatchers.IO) {
             val loaded = loadBitmapFromUri(context, imageUri)
@@ -96,9 +97,7 @@ fun ImagePreviewScreen(
     ) {
         if (imageBitmap != null) {
             ImageCropper(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { rotationZ = rotationAngle },
+                modifier = Modifier.fillMaxSize(),
                 imageBitmap = imageBitmap!!,
                 contentDescription = "Image Cropper",
                 cropProperties = cropProperties,
@@ -108,13 +107,7 @@ fun ImagePreviewScreen(
                 onCropSuccess = { croppedBitmap: ImageBitmap ->
                     scope.launch {
                         val androidBitmap = croppedBitmap.asAndroidBitmap()
-                        val finalBitmap = if (rotationAngle != 0f) {
-                            rotateBitmap(androidBitmap, rotationAngle)
-                        } else {
-                            androidBitmap
-                        }
-
-                        val savedUri = saveBitmapToCache(context, finalBitmap)
+                        val savedUri = saveBitmapToCache(context, androidBitmap)
                         if (savedUri != null) {
                             navController.previousBackStackEntry
                                 ?.savedStateHandle?.set("edited_image_uri", savedUri)
@@ -171,7 +164,13 @@ fun ImagePreviewScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
             IconButton(
-                onClick = { rotationAngle = (rotationAngle + 90f) % 360f },
+                onClick = {
+                    // Rotate the actual bitmap data so the cropper recalculates bounds
+                    imageBitmap?.let { currentBitmap ->
+                        val rotated = rotateBitmap(currentBitmap.asAndroidBitmap(), 90f)
+                        imageBitmap = rotated.asImageBitmap()
+                    }
+                },
                 modifier = Modifier.align(Alignment.CenterEnd)
             ) {
                 Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = "Rotate", tint = Color.White)
@@ -180,11 +179,36 @@ fun ImagePreviewScreen(
     }
 }
 
-// --- Logic remains the same ---
+// --- Load bitmap with EXIF orientation correction ---
 private fun loadBitmapFromUri(context: Context, uri: Uri): ImageBitmap? {
     return try {
+        // 1. Decode the raw bitmap
         val inputStream = context.contentResolver.openInputStream(uri)
-        BitmapFactory.decodeStream(inputStream)?.asImageBitmap()
+        val bitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+        inputStream?.close()
+
+        // 2. Read EXIF orientation tag
+        val exifStream = context.contentResolver.openInputStream(uri) ?: return bitmap.asImageBitmap()
+        val exif = ExifInterface(exifStream)
+        val orientation = exif.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
+        exifStream.close()
+
+        // 3. Apply the correct rotation based on EXIF data
+        val rotationDegrees = when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+
+        if (rotationDegrees != 0f) {
+            rotateBitmap(bitmap, rotationDegrees).asImageBitmap()
+        } else {
+            bitmap.asImageBitmap()
+        }
     } catch (e: Exception) { null }
 }
 

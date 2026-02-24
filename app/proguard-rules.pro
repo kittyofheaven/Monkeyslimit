@@ -41,3 +41,27 @@
     public static int v(...);
     public static int i(...);
 }
+
+# 8. TLS/SSL Security Providers (Fixes SSL handshake errors on all devices)
+# Conscrypt — Primary TLS provider used by OkHttp on most devices
+-keep class org.conscrypt.** { *; }
+-dontwarn org.conscrypt.**
+
+# BouncyCastle — Fallback security provider (used by some OEMs like Huawei)
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+
+# OpenJSSE — Alternative Java SSL engine
+-keep class org.openjsse.** { *; }
+-dontwarn org.openjsse.**
+
+# 9. OkHttp Internal TLS Classes (Prevents R8 from stripping SSL negotiation)
+-keep class okhttp3.internal.platform.** { *; }
+-keep class okhttp3.internal.tls.** { *; }
+-dontwarn okhttp3.internal.platform.**
+
+# 10. Java Security — Prevent stripping of core SSL/TLS infrastructure
+-keep class javax.net.ssl.** { *; }
+-keep class java.security.** { *; }
+-keep class sun.security.ssl.** { *; }
+-dontwarn sun.security.ssl.**

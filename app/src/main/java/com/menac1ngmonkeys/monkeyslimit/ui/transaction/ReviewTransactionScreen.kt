@@ -421,8 +421,12 @@ fun TransactionTypeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) // Lighter grey background
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(24.dp),
+                clip = true
+            )
+            .background(MaterialTheme.colorScheme.surface) // Lighter grey background
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -686,9 +690,16 @@ fun MiniBudgetDropdown(selectedBudget: Budgets?, budgets: List<Budgets>, onBudge
             textColor = MaterialTheme.colorScheme.onPrimaryContainer,
             height = 28.dp, textSize = 12.sp, onClick = { expanded = true }
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             budgets.forEach { budget ->
-                DropdownMenuItem(text = { Text(budget.name) }, onClick = { onBudgetSelected(budget); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(budget.name) },
+                    onClick = { onBudgetSelected(budget); expanded = false }
+                )
             }
         }
     }
@@ -704,9 +715,16 @@ fun CategoryDropdown(selectedCategory: Categories?, categories: List<Categories>
             textColor = MaterialTheme.colorScheme.onSecondary,
             height = 28.dp, textSize = 12.sp, onClick = { expanded = true }
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             categories.forEach { category ->
-                DropdownMenuItem(text = { Text(category.name) }, onClick = { onCategorySelected(category); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(category.name) },
+                    onClick = { onCategorySelected(category); expanded = false },
+                )
             }
         }
     }
